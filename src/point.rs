@@ -1,4 +1,5 @@
 /// Point represents a point in n-dimensional space.
+#[derive(Debug, Clone)]
 pub struct Point<T>(Vec<T>);
 
 impl<T> Point<T> {
@@ -31,6 +32,10 @@ impl<T> Point<T> {
             .sum::<f64>()
             .sqrt()
     }
+}
+
+pub trait WithPoint<T: PartialOrd> {
+    fn point(&self) -> Point<T>;
 }
 
 #[cfg(test)]
