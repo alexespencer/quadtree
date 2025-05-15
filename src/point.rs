@@ -1,11 +1,17 @@
-use nonempty::NonEmpty;
-
 /// Point represents a point in n-dimensional space.
-pub struct Point<T>(NonEmpty<T>);
+pub struct Point<T>(Vec<T>);
 
 impl<T> Point<T> {
-    pub fn new(vec: NonEmpty<T>) -> Point<T> {
+    pub fn new(vec: Vec<T>) -> Point<T> {
         Point(vec)
+    }
+
+    pub fn dimension_values(&self) -> &[T] {
+        &self.0
+    }
+
+    pub fn dimensions(&self) -> usize {
+        self.0.len()
     }
 
     pub fn distance(&self, other: &Point<T>) -> f64
@@ -31,35 +37,34 @@ impl<T> Point<T> {
 mod tests {
     use super::*;
     use approx::assert_abs_diff_eq;
-    use nonempty::nonempty;
 
     #[test]
     fn test_point_creation() {
         // 3D using integers
-        let point = Point::new(nonempty![1, 2, 3]);
-        assert_eq!(point.0, nonempty![1, 2, 3]);
+        let point = Point::new(vec![1, 2, 3]);
+        assert_eq!(point.0, vec![1, 2, 3]);
 
         // 3D using floats
-        let point_float = Point::new(nonempty![1.0, 2.0, 3.0]);
-        assert_eq!(point_float.0, nonempty![1.0, 2.0, 3.0]);
+        let point_float = Point::new(vec![1.0, 2.0, 3.0]);
+        assert_eq!(point_float.0, vec![1.0, 2.0, 3.0]);
 
         // 2D using integers
-        let point_2d = Point::new(nonempty![4, 5]);
-        assert_eq!(point_2d.0, nonempty![4, 5]);
+        let point_2d = Point::new(vec![4, 5]);
+        assert_eq!(point_2d.0, vec![4, 5]);
     }
 
     #[test]
     fn test_point_distance() {
-        let point_a = Point::new(nonempty![1.0, 2.0, 3.0]);
-        let point_b = Point::new(nonempty![4.0, 5.0, 6.0]);
+        let point_a = Point::new(vec![1.0, 2.0, 3.0]);
+        let point_b = Point::new(vec![4.0, 5.0, 6.0]);
         let distance = point_a.distance(&point_b);
         assert_abs_diff_eq!(distance, 5.2, epsilon = 0.01);
     }
 
     #[test]
     fn test_point_distance_i32() {
-        let point_a = Point::new(nonempty![1, 2, 3]);
-        let point_b = Point::new(nonempty![4, 5, 6]);
+        let point_a = Point::new(vec![1, 2, 3]);
+        let point_b = Point::new(vec![4, 5, 6]);
         let distance = point_a.distance(&point_b);
         assert_abs_diff_eq!(distance, 5.2, epsilon = 0.01);
     }

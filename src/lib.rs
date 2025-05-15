@@ -1,3 +1,4 @@
 pub mod interval;
 pub mod point;
 pub mod quadtree;
+pub mod region;

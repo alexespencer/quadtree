@@ -22,6 +22,10 @@ impl<T: PartialOrd> Interval<T> {
     pub fn end(&self) -> &T {
         &self.end
     }
+
+    pub fn contains(&self, value: &T) -> bool {
+        self.start <= *value && *value < self.end
+    }
 }
 
 #[cfg(test)]
