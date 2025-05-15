@@ -2,7 +2,7 @@ use crate::{interval::Interval, point::Point, query::Query};
 use itertools::Itertools;
 
 /// A region in n-dimensional space defined by a set of intervals.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Region {
     intervals: Vec<Interval>,
 }

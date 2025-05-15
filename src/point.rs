@@ -34,6 +34,13 @@ impl<T> Point<T> {
     }
 }
 
+impl<T: Copy + Into<f64>> Point<T> {
+    pub fn to_f64_point(&self) -> Point<f64> {
+        let vec = self.0.iter().map(|&x| x.into()).collect();
+        Point(vec)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
