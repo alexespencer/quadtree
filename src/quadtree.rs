@@ -5,7 +5,7 @@ use std::num::NonZero;
 pub trait Storable<T, V> {
     fn point(&self) -> Point<T>;
 
-    fn data(&self) -> V;
+    fn data(&self) -> &V;
 }
 
 pub struct QuadTree<T, V> {
@@ -23,7 +23,9 @@ impl<T: Copy + Into<f64>, V> QuadTree<T, V> {
         }
     }
 
-    pub fn insert(&mut self, point: Box<dyn Storable<T, V>>) -> Result<()> {
+    pub fn insert(&mut self, point: impl Storable<T, V> + 'static) -> Result<()> {
+        let point = Box::new(point);
+
         if self.points.len() < self.points.capacity() {
             if !self.region.contains(&point.point()) {
                 bail!("Point is outside the region");
@@ -42,7 +44,7 @@ impl<T: Copy + Into<f64>, V> QuadTree<T, V> {
             .ok_or_eyre("subtrees not created, this is a bug")?
         {
             if subtree.region.contains(&point.point()) {
-                return subtree.insert(point);
+                return subtree.insert(*point);
             }
         }
         // If we get here, the point was not inserted, which should not happen
@@ -71,18 +73,27 @@ mod tests {
     use crate::{interval::Interval, point::Point};
 
     pub struct RandomData(Point<i32>, String);
-    impl Storable<i32, String> for RandomData {
+    impl Storable<i32, RandomData> for RandomData {
         fn point(&self) -> Point<i32> {
             self.0.clone()
         }
 
-        fn data(&self) -> String {
-            self.1.clone()
+        fn data(&self) -> &Self {
+            self
         }
     }
 
-    // Tests to do:
-    // Check inserting a point outside the region fails
+    #[test]
+    fn test_quadtree_insert_outside_region() {
+        let region = Region::new(vec![
+            Interval::try_new(0.0, 10.0).unwrap(),
+            Interval::try_new(0.0, 10.0).unwrap(),
+        ]);
+        let mut quadtree = QuadTree::new(region, NonZero::new(4).unwrap());
+
+        let point_outside = RandomData(Point::new(vec![11, 5]), "data".to_string());
+        assert!(quadtree.insert(point_outside).is_err());
+    }
 
     #[test]
     fn test_quadtree_initialise() {
@@ -103,10 +114,7 @@ mod tests {
 
         for i in 0..4 {
             quadtree
-                .insert(Box::new(RandomData(
-                    Point::new(vec![i, 0]),
-                    "data".to_string(),
-                )))
+                .insert(RandomData(Point::new(vec![i, 0]), "data".to_string()))
                 .unwrap();
         }
 
@@ -124,10 +132,7 @@ mod tests {
 
         for i in 0..4 {
             quadtree
-                .insert(Box::new(RandomData(
-                    Point::new(vec![i, 0]),
-                    "data".to_string(),
-                )))
+                .insert(RandomData(Point::new(vec![i, 0]), "data".to_string()))
                 .unwrap();
         }
 
@@ -136,10 +141,10 @@ mod tests {
 
         // Insert one more point to trigger subdivision
         quadtree
-            .insert(Box::new(RandomData(
+            .insert(RandomData(
                 Point::new(vec![5, 5]),
                 "data_subdivided".to_string(),
-            )))
+            ))
             .unwrap();
 
         // Check that the quadtree has subdivided
@@ -153,7 +158,7 @@ mod tests {
             subtrees
                 .iter()
                 .flat_map(|subtree| subtree.points.iter())
-                .map(|p| p.data() == "data_subdivided")
+                .map(|p| p.data().1 == "data_subdivided")
                 .all(|x| x)
         );
     }
