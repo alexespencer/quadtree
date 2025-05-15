@@ -4,8 +4,7 @@ use std::num::NonZero;
 
 pub trait Storable<T, V> {
     fn point(&self) -> Point<T>;
-
-    fn data(&self) -> &V;
+    fn item(&self) -> &V;
 }
 
 pub struct QuadTree<T, V> {
@@ -72,13 +71,13 @@ mod tests {
     use super::*;
     use crate::{interval::Interval, point::Point};
 
-    pub struct RandomData(Point<i32>, String);
-    impl Storable<i32, RandomData> for RandomData {
+    pub struct TestStruct(Point<i32>, String);
+    impl Storable<i32, TestStruct> for TestStruct {
         fn point(&self) -> Point<i32> {
             self.0.clone()
         }
 
-        fn data(&self) -> &Self {
+        fn item(&self) -> &Self {
             self
         }
     }
@@ -91,7 +90,7 @@ mod tests {
         ]);
         let mut quadtree = QuadTree::new(region, NonZero::new(4).unwrap());
 
-        let point_outside = RandomData(Point::new(vec![11, 5]), "data".to_string());
+        let point_outside = TestStruct(Point::new(vec![11, 5]), "data".to_string());
         assert!(quadtree.insert(point_outside).is_err());
     }
 
@@ -114,7 +113,7 @@ mod tests {
 
         for i in 0..4 {
             quadtree
-                .insert(RandomData(Point::new(vec![i, 0]), "data".to_string()))
+                .insert(TestStruct(Point::new(vec![i, 0]), "data".to_string()))
                 .unwrap();
         }
 
@@ -132,7 +131,7 @@ mod tests {
 
         for i in 0..4 {
             quadtree
-                .insert(RandomData(Point::new(vec![i, 0]), "data".to_string()))
+                .insert(TestStruct(Point::new(vec![i, 0]), "data".to_string()))
                 .unwrap();
         }
 
@@ -141,7 +140,7 @@ mod tests {
 
         // Insert one more point to trigger subdivision
         quadtree
-            .insert(RandomData(
+            .insert(TestStruct(
                 Point::new(vec![5, 5]),
                 "data_subdivided".to_string(),
             ))
@@ -151,6 +150,7 @@ mod tests {
         assert!(quadtree.subtrees.is_some());
         let subtrees = quadtree.subtrees.as_ref().unwrap();
         assert_eq!(subtrees.len(), 4);
+
         // Assert the point went into only 1 subtree
         let subtree_total_points: usize = subtrees.iter().map(|st| st.points.len()).sum();
         assert_eq!(subtree_total_points, 1);
@@ -158,7 +158,7 @@ mod tests {
             subtrees
                 .iter()
                 .flat_map(|subtree| subtree.points.iter())
-                .map(|p| p.data().1 == "data_subdivided")
+                .map(|p| p.item().1 == "data_subdivided")
                 .all(|x| x)
         );
     }
