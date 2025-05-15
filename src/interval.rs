@@ -1,30 +1,47 @@
-use eyre::{Result, bail};
+use eyre::{Result, ensure};
 
 /// Represents an interval with a start and end value.
 /// The interval is inclusive of start and exclusive of end.
-pub struct Interval<T: PartialOrd> {
-    start: T,
-    end: T,
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Interval {
+    start: f64,
+    end: f64,
 }
 
-impl<T: PartialOrd> Interval<T> {
-    pub fn try_new(start: T, end: T) -> Result<Self> {
-        if start > end {
-            bail!("Start must be less than or equal to end");
-        }
+impl Interval {
+    pub fn try_new(start: f64, end: f64) -> Result<Self> {
+        ensure!(start <= end, "Start must be less than or equal to end");
+        ensure!(start.is_finite(), "Start must be finite");
+        ensure!(end.is_finite(), "End must be finite");
         Ok(Interval { start, end })
     }
 
-    pub fn start(&self) -> &T {
+    pub fn start(&self) -> &f64 {
         &self.start
     }
 
-    pub fn end(&self) -> &T {
+    pub fn end(&self) -> &f64 {
         &self.end
     }
 
-    pub fn contains(&self, value: &T) -> bool {
-        self.start <= *value && *value < self.end
+    pub fn contains(&self, value: impl Into<f64>) -> bool {
+        let value = value.into();
+        self.start <= value && value < self.end
+    }
+
+    pub fn subdivide(&self) -> Vec<Self> {
+        // Split down the middle
+        let midpoint = self.start.midpoint(self.end);
+        vec![
+            Interval {
+                start: self.start,
+                end: midpoint,
+            },
+            Interval {
+                start: midpoint,
+                end: self.end,
+            },
+        ]
     }
 }
 
@@ -33,14 +50,34 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_interval_creation() {
+    fn test_interval() {
         // Valid interval
-        let interval = Interval::try_new(1, 5).unwrap();
-        assert_eq!(*interval.start(), 1);
-        assert_eq!(*interval.end(), 5);
+        let interval = Interval::try_new(1.0, 5.0).unwrap();
+        assert_eq!(*interval.start(), 1.0);
+        assert_eq!(*interval.end(), 5.0);
+        assert!(interval.contains(2.5));
+        assert!(interval.contains(1.0));
+        assert!(!interval.contains(0.9));
+        assert!(!interval.contains(5.0));
+
+        assert!(interval.contains(1));
 
         // Invalid interval
-        let invalid_interval = Interval::try_new(5, 1);
+        let invalid_interval = Interval::try_new(5.0, 1.0);
         assert!(invalid_interval.is_err());
+    }
+
+    #[test]
+    fn test_interval_subdivide() {
+        let interval = Interval::try_new(1.0, 5.0).unwrap();
+        let subdivided = interval.subdivide();
+        if let [left, right] = subdivided.as_slice() {
+            assert_eq!(*left.start(), 1.0);
+            assert_eq!(*left.end(), 3.0);
+            assert_eq!(*right.start(), 3.0);
+            assert_eq!(*right.end(), 5.0);
+        } else {
+            panic!("Expected exactly two intervals after subdivision");
+        }
     }
 }

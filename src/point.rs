@@ -34,7 +34,7 @@ impl<T> Point<T> {
     }
 }
 
-pub trait WithPoint<T: PartialOrd> {
+pub trait WithPoint<T> {
     fn point(&self) -> Point<T>;
 }
 
