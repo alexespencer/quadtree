@@ -1,4 +1,4 @@
-use crate::{point::Point, region::Region};
+use crate::{point::Point, query::Query, region::Region};
 use eyre::{OptionExt, Result, bail};
 use std::num::NonZero;
 
@@ -46,6 +46,7 @@ impl<T: Copy + Into<f64>, V> QuadTree<T, V> {
                 return subtree.insert(*point);
             }
         }
+
         // If we get here, the point was not inserted, which should not happen
         bail!("Point not inserted into any subtree");
     }
@@ -64,10 +65,31 @@ impl<T: Copy + Into<f64>, V> QuadTree<T, V> {
                 .collect(),
         );
     }
+
+    pub fn query<'a, Q>(&'a self, query: &'a Q) -> Box<dyn Iterator<Item = &'a V> + 'a>
+    where
+        Q: Query<T> + 'a,
+    {
+        let my_iter = self
+            .points
+            .iter()
+            .filter_map(move |point| query.contains(&point.point()).then_some(point.item()));
+
+        let subtree_iter = self.subtrees.iter().flat_map(|subtrees| {
+            subtrees
+                .iter()
+                .filter(|subtree| subtree.region.intersects(query.region()))
+                .flat_map(|subtree| subtree.query(query))
+        });
+
+        Box::new(my_iter.chain(subtree_iter))
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use rand::{Rng, SeedableRng};
+
     use super::*;
     use crate::{interval::Interval, point::Point};
 
@@ -161,5 +183,87 @@ mod tests {
                 .map(|p| p.item().1 == "data_subdivided")
                 .all(|x| x)
         );
+    }
+
+    #[test]
+    fn test_quadtree_query() {
+        let region = Region::new(vec![
+            Interval::try_new(0.0, 10.0).unwrap(),
+            Interval::try_new(0.0, 10.0).unwrap(),
+        ]);
+        let mut quadtree = QuadTree::new(region, NonZero::new(4).unwrap());
+
+        for i in 0..4 {
+            quadtree
+                .insert(TestStruct(Point::new(vec![i, 0]), "data".to_string()))
+                .unwrap();
+        }
+
+        // Construct query region that should only contain only the first two points
+        let query_region = Region::new(vec![
+            Interval::try_new(0.0, 2.0).unwrap(),
+            Interval::try_new(0.0, 10.0).unwrap(),
+        ]);
+
+        let results: Vec<_> = quadtree.query(&query_region).collect();
+
+        assert_eq!(results.len(), 2);
+    }
+
+    #[test]
+    fn test_quadtree_query_subdivided() {
+        let region = Region::new(vec![
+            Interval::try_new(0.0, 10.0).unwrap(),
+            Interval::try_new(0.0, 10.0).unwrap(),
+        ]);
+        // Capacity of 2 will ensure lots of subdivision when inserting 10 items
+        let mut quadtree = QuadTree::new(region, NonZero::new(2).unwrap());
+
+        for i in 0..10 {
+            quadtree
+                .insert(TestStruct(Point::new(vec![i, 0]), "data".to_string()))
+                .unwrap();
+        }
+
+        // Construct query region
+        let query_region = Region::new(vec![
+            Interval::try_new(0.0, 10.0).unwrap(),
+            Interval::try_new(0.0, 10.0).unwrap(),
+        ]);
+
+        let results: Vec<_> = quadtree.query(&query_region).collect();
+
+        assert_eq!(results.len(), 10);
+    }
+
+    #[test]
+    fn test_quadtree_many_points() {
+        let region = Region::new(vec![
+            Interval::try_new(0.0, 100.0).unwrap(),
+            Interval::try_new(0.0, 100.0).unwrap(),
+        ]);
+
+        // Capacity of 100 will ensure lots of subdivision when inserting 100,000 items
+        let mut quadtree = QuadTree::new(region, NonZero::new(100).unwrap());
+        let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(42);
+
+        for _ in 0..100_000 {
+            // Choose random x and y coordinates
+            let x = rng.random_range(0..100);
+            let y = rng.random_range(0..100);
+            quadtree
+                .insert(TestStruct(Point::new(vec![x, y]), "data".to_string()))
+                .unwrap();
+        }
+
+        // Construct query region
+        let query_region = Region::new(vec![
+            Interval::try_new(0.0, 10.0).unwrap(),
+            Interval::try_new(0.0, 10.0).unwrap(),
+        ]);
+
+        let results: Vec<_> = quadtree.query(&query_region).collect();
+        dbg!(&results.len());
+        assert!((900..=1100).contains(&results.len()));
     }
 }

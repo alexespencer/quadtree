@@ -43,6 +43,10 @@ impl Interval {
             },
         ]
     }
+
+    pub fn intersects(&self, other: &Self) -> bool {
+        self.start < other.end && other.start < self.end
+    }
 }
 
 #[cfg(test)]
@@ -79,5 +83,17 @@ mod tests {
         } else {
             panic!("Expected exactly two intervals after subdivision");
         }
+    }
+
+    #[test]
+    fn test_interval_intersects() {
+        let interval_a = Interval::try_new(1.0, 5.0).unwrap();
+        let interval_b = Interval::try_new(4.0, 6.0).unwrap();
+        let interval_c = Interval::try_new(6.0, 8.0).unwrap();
+        let interval_d = Interval::try_new(5.0, 7.0).unwrap();
+
+        assert!(interval_a.intersects(&interval_b));
+        assert!(!interval_a.intersects(&interval_c));
+        assert!(!interval_d.intersects(&interval_a));
     }
 }

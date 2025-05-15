@@ -1,6 +1,8 @@
-use crate::{interval::Interval, point::Point};
+use crate::{interval::Interval, point::Point, query::Query};
 use itertools::Itertools;
 
+/// A region in n-dimensional space defined by a set of intervals.
+#[derive(Debug, Clone)]
 pub struct Region {
     intervals: Vec<Interval>,
 }
@@ -40,6 +42,27 @@ impl Region {
             .multi_cartesian_product()
             .map(|product| product.into_iter().collect())
             .collect::<Vec<_>>()
+    }
+
+    pub fn intersects(&self, other: &Region) -> bool {
+        assert!(
+            self.intervals.len() == other.intervals.len(),
+            "Regions must have the same number of dimensions"
+        );
+        self.intervals
+            .iter()
+            .zip(other.intervals.iter())
+            .all(|(a, b)| a.intersects(b))
+    }
+}
+
+impl<T: Copy + Into<f64>> Query<T> for Region {
+    fn region(&self) -> &Region {
+        self
+    }
+
+    fn contains(&self, point: &Point<T>) -> bool {
+        self.contains(point)
     }
 }
 
