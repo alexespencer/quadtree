@@ -34,10 +34,6 @@ impl<T> Point<T> {
     }
 }
 
-pub trait WithPoint<T> {
-    fn point(&self) -> Point<T>;
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

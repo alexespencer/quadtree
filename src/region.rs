@@ -1,5 +1,5 @@
 use crate::{interval::Interval, point::Point};
-use itertools::{Itertools, iproduct};
+use itertools::Itertools;
 
 pub struct Region {
     intervals: Vec<Interval>,
