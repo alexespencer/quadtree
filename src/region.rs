@@ -56,12 +56,12 @@ impl Region {
     }
 }
 
-impl<T: Copy + Into<f64>> Query<T> for Region {
+impl Query for Region {
     fn region(&self) -> &Region {
         self
     }
 
-    fn contains(&self, point: &Point<T>) -> bool {
+    fn contains<T: Copy + Into<f64>>(&self, point: &Point<T>) -> bool {
         self.contains(point)
     }
 }

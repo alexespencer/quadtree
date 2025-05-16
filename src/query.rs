@@ -9,9 +9,9 @@ use crate::{point::Point, region::Region};
 /// The region should be the bounding box of the circle
 /// and the `contains` method would check if the point
 /// is within the circle.
-pub trait Query<T> {
+pub trait Query {
     fn region(&self) -> &Region;
-    fn contains(&self, point: &Point<T>) -> bool;
+    fn contains<T: Copy + Into<f64>>(&self, point: &Point<T>) -> bool;
 }
 
 #[cfg(test)]
@@ -49,12 +49,12 @@ mod tests {
         }
     }
 
-    impl<T: Copy + Into<f64>> Query<T> for CircleQuery {
+    impl Query for CircleQuery {
         fn region(&self) -> &Region {
             &self.region
         }
 
-        fn contains(&self, point: &Point<T>) -> bool {
+        fn contains<T: Copy + Into<f64>>(&self, point: &Point<T>) -> bool {
             let distance = self.center.distance(&point.to_f64_point());
             distance <= self.radius
         }
@@ -77,9 +77,8 @@ mod tests {
         let radius = 3.0;
         let circle_query = CircleQuery::new(center.clone(), radius);
 
-        // TODO(alex.spencer): tidy up this:
         assert_eq!(
-            <CircleQuery as Query<f64>>::region(&circle_query),
+            circle_query.region(),
             &Region::new(vec![
                 Interval::try_new(2.0, 8.0).unwrap(),
                 Interval::try_new(2.0, 8.0).unwrap(),

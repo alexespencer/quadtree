@@ -68,7 +68,7 @@ impl<T: Copy + Into<f64>, V> QuadTree<T, V> {
 
     pub fn query<'a, Q>(&'a self, query: &'a Q) -> Box<dyn Iterator<Item = &'a V> + 'a>
     where
-        Q: Query<T> + 'a,
+        Q: Query + 'a,
     {
         let my_iter = self
             .points
