@@ -372,6 +372,11 @@ mod tests {
     }
 
     #[test]
+    fn test_panic() {
+        panic!("test");
+    }
+
+    #[test]
     fn perf_smoke_test_region() {
         const POINT_COUNT: usize = 100000;
         // Create a Vec of random points
