@@ -372,4 +372,61 @@ mod tests {
         assert_eq!(count_quadtree, count_non_quadtree);
         assert!(elapsed_quadtree < elapsed_non_quadtree);
     }
+
+    #[test]
+    fn perf_smoke_test_region() {
+        const POINT_COUNT: usize = 100000;
+        // Create a Vec of random points
+        let mut rng = rand::rng();
+        let points: Vec<Point<f64>> = (0..POINT_COUNT)
+            .map(|_| {
+                Point::new(vec![
+                    rng.random_range(0.0..1000.0),
+                    rng.random_range(0.0..1000.0),
+                ])
+            })
+            .collect();
+
+        // Create a QuadTree with a region that covers the points
+        let region = Region::new(vec![
+            Interval::try_new(0.0, 1000.0).unwrap(),
+            Interval::try_new(0.0, 1000.0).unwrap(),
+        ]);
+        let mut quadtree = QuadTree::new(region, NonZero::new(10).unwrap());
+        for point in &points {
+            quadtree.insert(point.clone()).unwrap();
+        }
+
+        let search_region = Region::new(vec![
+            Interval::try_new(550.0, 600.0).unwrap(),
+            Interval::try_new(0.0, 200.0).unwrap(),
+        ]);
+
+        // Loop over the points and count how many points are in the random region
+        // not using the quadtree, first - but a double loop
+        let start = std::time::Instant::now();
+        let count_non_quadtree = points
+            .iter()
+            .filter(|point| search_region.contains(&point.point()))
+            .count();
+        let elapsed_non_quadtree = start.elapsed();
+        assert_ne!(
+            POINT_COUNT, count_non_quadtree,
+            "All points are in search region?"
+        );
+
+        // Now use the quadtree to count how many points have a neighbour within a distance of 10.0
+        // Reset the timer
+        let start = std::time::Instant::now();
+        let count_quadtree = quadtree.query(&search_region).count();
+        let elapsed_quadtree = start.elapsed();
+
+        dbg!(elapsed_non_quadtree);
+        dbg!(elapsed_quadtree);
+        dbg!(count_quadtree);
+
+        // Quad tree should be faster than non-quadtree but find the same number of points
+        assert_eq!(count_quadtree, count_non_quadtree);
+        assert!(elapsed_quadtree < elapsed_non_quadtree);
+    }
 }
