@@ -24,8 +24,8 @@ pub trait Storable<V> {
 ///
 /// // Initialise the QuadTree with this region and the maximum number of points each individual node
 /// // should store. You can store any Struct in the QuadTree as long as it implements the Storable trait.
-/// // Here we're deferring the type of the QuadTree to the compiler
-/// // to infer the type from the first insert
+/// // Here we're deferring the type of the QuadTree to the compiler,
+/// // inferred from the first insert
 /// let mut quadtree = QuadTree::new(region, NonZero::new(4).unwrap());
 ///
 /// // Insert points into the QuadTree
