@@ -24,9 +24,8 @@ impl Interval {
         &self.end
     }
 
-    pub fn contains(&self, value: impl Into<f64>) -> bool {
-        let value = value.into();
-        self.start <= value && value < self.end
+    pub fn contains(&self, value: &f64) -> bool {
+        self.start <= *value && *value < self.end
     }
 
     /// Subdivides the Interval at the mid-point
@@ -59,12 +58,10 @@ mod tests {
         let interval = Interval::try_new(1.0, 5.0).unwrap();
         assert_eq!(*interval.start(), 1.0);
         assert_eq!(*interval.end(), 5.0);
-        assert!(interval.contains(2.5));
-        assert!(interval.contains(1.0));
-        assert!(!interval.contains(0.9));
-        assert!(!interval.contains(5.0));
-
-        assert!(interval.contains(1));
+        assert!(interval.contains(&2.5));
+        assert!(interval.contains(&1.0));
+        assert!(!interval.contains(&0.9));
+        assert!(!interval.contains(&5.0));
 
         // Invalid interval
         let invalid_interval = Interval::try_new(5.0, 1.0);

@@ -8,17 +8,17 @@ use crate::{interval::Interval, point::Point, region::Region};
 /// would check if the point is within the circle.
 pub trait Query {
     fn region(&self) -> &Region;
-    fn contains<T: Copy + Into<f64>>(&self, point: &Point<T>) -> bool;
+    fn contains(&self, point: &Point) -> bool;
 }
 
 pub struct CircleQuery {
-    center: Point<f64>,
+    center: Point,
     radius: f64,
     region: Region,
 }
 
 impl CircleQuery {
-    pub fn new(center: Point<f64>, radius: f64) -> Self {
+    pub fn new(center: Point, radius: f64) -> Self {
         let center_f64 = center.dimension_values();
         let intervals = vec![
             Interval::try_new(center_f64[0] - radius, center_f64[0] + radius).unwrap(),
@@ -38,8 +38,8 @@ impl Query for CircleQuery {
         &self.region
     }
 
-    fn contains<T: Copy + Into<f64>>(&self, point: &Point<T>) -> bool {
-        let distance = self.center.distance(&point.to_f64_point());
+    fn contains(&self, point: &Point) -> bool {
+        let distance = self.center.distance(&point);
         distance <= self.radius
     }
 }
@@ -57,10 +57,10 @@ mod tests {
         quadtree::{QuadTree, Storable},
     };
 
-    pub struct TestStruct(Point<i32>);
+    pub struct TestStruct(Point);
     impl Storable<TestStruct> for TestStruct {
-        fn point(&self) -> Point<f64> {
-            self.0.to_f64_point()
+        fn point(&self) -> &Point {
+            &self.0
         }
 
         fn item(&self) -> &Self {

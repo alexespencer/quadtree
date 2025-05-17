@@ -3,7 +3,7 @@ use eyre::{OptionExt, Result, bail};
 use std::num::NonZero;
 
 pub trait Storable<V> {
-    fn point(&self) -> Point<f64>;
+    fn point(&self) -> &Point;
     fn item(&self) -> &V;
 }
 
@@ -131,10 +131,10 @@ mod tests {
     use super::*;
     use crate::{interval::Interval, point::Point, query::CircleQuery};
 
-    pub struct TestStruct(Point<i32>, String);
+    pub struct TestStruct(Point, String);
     impl Storable<TestStruct> for TestStruct {
-        fn point(&self) -> Point<f64> {
-            self.0.to_f64_point()
+        fn point(&self) -> &Point {
+            &self.0
         }
 
         fn item(&self) -> &Self {
@@ -160,7 +160,7 @@ mod tests {
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
-        let _: QuadTree<Point<f64>> = QuadTree::new(region, NonZero::new(4).unwrap());
+        let _: QuadTree<Point> = QuadTree::new(region, NonZero::new(4).unwrap());
     }
 
     #[test]
@@ -307,10 +307,10 @@ mod tests {
 
     #[test]
     fn perf_smoke_test_neighbours() {
-        const POINT_COUNT: usize = 1000;
+        const POINT_COUNT: usize = 2000;
         // Create a Vec of random points
         let mut rng = rand::rng();
-        let points: Vec<Point<f64>> = (0..POINT_COUNT)
+        let points: Vec<Point> = (0..POINT_COUNT)
             .map(|_| {
                 Point::new(vec![
                     rng.random_range(0.0..1000.0),
@@ -378,7 +378,7 @@ mod tests {
         const POINT_COUNT: usize = 100000;
         // Create a Vec of random points
         let mut rng = rand::rng();
-        let points: Vec<Point<f64>> = (0..POINT_COUNT)
+        let points: Vec<Point> = (0..POINT_COUNT)
             .map(|_| {
                 Point::new(vec![
                     rng.random_range(0.0..1000.0),

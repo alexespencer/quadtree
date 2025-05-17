@@ -16,7 +16,7 @@ impl Region {
         &self.intervals
     }
 
-    pub fn contains<T: Copy + Into<f64>>(&self, point: &Point<T>) -> bool {
+    pub fn contains(&self, point: &Point) -> bool {
         assert!(
             self.intervals.len() == point.dimensions(),
             "Point dimension {} does not match region dimension {}",
@@ -26,7 +26,7 @@ impl Region {
         self.intervals
             .iter()
             .zip(point.dimension_values())
-            .all(|(interval, value)| interval.contains(*value))
+            .all(|(interval, value)| interval.contains(value))
     }
 
     pub fn subdivide(&self) -> Vec<Vec<Interval>> {
@@ -63,7 +63,7 @@ impl Query for Region {
         self
     }
 
-    fn contains<T: Copy + Into<f64>>(&self, point: &Point<T>) -> bool {
+    fn contains(&self, point: &Point) -> bool {
         self.contains(point)
     }
 }

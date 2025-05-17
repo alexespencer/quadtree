@@ -2,14 +2,14 @@ use crate::quadtree::Storable;
 
 /// Point represents a point in n-dimensional space.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Point<T: Copy + Into<f64>>(Vec<T>);
+pub struct Point(Vec<f64>);
 
-impl<T: Copy + Into<f64>> Point<T> {
-    pub fn new(vec: Vec<T>) -> Point<T> {
-        Point(vec)
+impl Point {
+    pub fn new<T: Into<f64>>(vec: Vec<T>) -> Point {
+        Point(vec.into_iter().map(Into::into).collect::<Vec<_>>())
     }
 
-    pub fn dimension_values(&self) -> &[T] {
+    pub fn dimension_values(&self) -> &[f64] {
         &self.0
     }
 
@@ -17,7 +17,7 @@ impl<T: Copy + Into<f64>> Point<T> {
         self.0.len()
     }
 
-    pub fn distance(&self, other: &Point<T>) -> f64 {
+    pub fn distance(&self, other: &Point) -> f64 {
         if self.0.len() != other.0.len() {
             panic!("Points must have the same dimension");
         }
@@ -25,23 +25,18 @@ impl<T: Copy + Into<f64>> Point<T> {
             .iter()
             .zip(other.0.iter())
             .map(|(a, b)| {
-                let diff = (*a).into() - (*b).into();
+                let diff = a - b;
                 diff * diff
             })
             .sum::<f64>()
             .sqrt()
     }
-
-    pub fn to_f64_point(&self) -> Point<f64> {
-        let vec = self.0.iter().map(|&x| x.into()).collect();
-        Point(vec)
-    }
 }
 
 /// We can trivially implement [Storable] for [Point]
-impl<T: Copy + Into<f64>> Storable<Point<T>> for Point<T> {
-    fn point(&self) -> Point<f64> {
-        self.to_f64_point()
+impl Storable<Point> for Point {
+    fn point(&self) -> &Point {
+        self
     }
 
     fn item(&self) -> &Self {
@@ -58,7 +53,7 @@ mod tests {
     fn test_point_creation() {
         // 3D using integers
         let point = Point::new(vec![1, 2, 3]);
-        assert_eq!(point.0, vec![1, 2, 3]);
+        assert_eq!(point.0, vec![1.0, 2.0, 3.0]);
 
         // 3D using floats
         let point_float = Point::new(vec![1.0, 2.0, 3.0]);
@@ -66,7 +61,7 @@ mod tests {
 
         // 2D using integers
         let point_2d = Point::new(vec![4, 5]);
-        assert_eq!(point_2d.0, vec![4, 5]);
+        assert_eq!(point_2d.0, vec![4.0, 5.0]);
     }
 
     #[test]
