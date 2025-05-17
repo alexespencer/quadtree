@@ -7,6 +7,42 @@ pub trait Storable<V> {
     fn item(&self) -> &V;
 }
 
+/// Technically an 'orthree' this QuadTree struct is actually a generalised version
+/// of a quadtree that can be used for any number of dimensions.
+/// See <https://en.wikipedia.org/wiki/Quadtree> for more information.
+/// Motivation: We want to be able to store points and query regions efficiently.
+///
+/// ```
+/// use quadtree::{interval::Interval, point::Point, quadtree::QuadTree, region::Region};
+/// use std::num::NonZero;
+///         
+/// // Create a region, the bounds of the quadtree
+/// let region = Region::new(vec![
+///     Interval::try_new(0.0, 10.0).unwrap(), // X-axis
+///     Interval::try_new(0.0, 10.0).unwrap(), // Y-axis
+/// ]);
+///
+/// // Initialise the QuadTree with this region and the maximum number of points each individual node
+/// // should store. You can store any Struct in the QuadTree as long as it implements the Storable trait.
+/// // Here we're deferring the type of the QuadTree to the compiler
+/// // to infer the type from the first insert
+/// let mut quadtree = QuadTree::new(region, NonZero::new(4).unwrap());
+///
+/// // Insert points into the QuadTree
+/// for i in 0..4 {
+///     quadtree.insert(Point::new(vec![i, 0])).unwrap();
+/// }
+///
+/// // To query the QuadTree, provide a region, or anything that implements the Query trait
+/// let query_region = Region::new(vec![
+///     Interval::try_new(0.0, 2.0).unwrap(),
+///     Interval::try_new(0.0, 10.0).unwrap(),
+/// ]);
+///
+/// let results: Vec<_> = quadtree.query(&query_region).collect();
+///
+/// assert_eq!(results.len(), 2);
+/// ```
 pub struct QuadTree<V> {
     region: Region,
     subtrees: Option<Vec<QuadTree<V>>>,
@@ -14,6 +50,7 @@ pub struct QuadTree<V> {
 }
 
 impl<V: Storable<V>> QuadTree<V> {
+    /// Create a new [QuadTree] with the given region and maximum number of points.
     pub fn new(region: Region, max_points: NonZero<usize>) -> Self {
         QuadTree {
             region,
@@ -22,6 +59,8 @@ impl<V: Storable<V>> QuadTree<V> {
         }
     }
 
+    /// Try to insert a point into the [QuadTree]. If the point is outside the quadtree's region, an error is returned.
+    /// All points must be [Storable] and of the type set in the [QuadTree].
     pub fn insert(&mut self, point: V) -> Result<()> {
         if self.points.len() < self.points.capacity() {
             if !self.region.contains(&point.point()) {
@@ -64,6 +103,7 @@ impl<V: Storable<V>> QuadTree<V> {
         );
     }
 
+    /// Query the [QuadTree] with a region (any type that implements the [Query] trait).
     pub fn query<'a, Q>(&'a self, query: &'a Q) -> Box<dyn Iterator<Item = &'a V> + 'a>
     where
         Q: Query + 'a,
@@ -89,7 +129,7 @@ mod tests {
     use rand::{Rng, SeedableRng};
 
     use super::*;
-    use crate::{interval::Interval, point::Point};
+    use crate::{interval::Interval, point::Point, query::CircleQuery};
 
     pub struct TestStruct(Point<i32>, String);
     impl Storable<TestStruct> for TestStruct {
@@ -263,5 +303,73 @@ mod tests {
         let results: Vec<_> = quadtree.query(&query_region).collect();
         dbg!(&results.len());
         assert!((900..=1100).contains(&results.len()));
+    }
+
+    #[test]
+    fn perf_smoke_test_neighbours() {
+        const POINT_COUNT: usize = 1000;
+        // Create a Vec of random points
+        let mut rng = rand::rng();
+        let points: Vec<Point<f64>> = (0..POINT_COUNT)
+            .map(|_| {
+                Point::new(vec![
+                    rng.random_range(0.0..1000.0),
+                    rng.random_range(0.0..1000.0),
+                ])
+            })
+            .collect();
+
+        // Create a QuadTree with a region that covers the points
+        let region = Region::new(vec![
+            Interval::try_new(0.0, 1000.0).unwrap(),
+            Interval::try_new(0.0, 1000.0).unwrap(),
+        ]);
+        let mut quadtree = QuadTree::new(region, NonZero::new(10).unwrap());
+        for point in &points {
+            quadtree.insert(point.clone()).unwrap();
+        }
+
+        // Loop over the points and count how many points have a neighbour within a distance of 10.0
+        // not using the quadtree, first - but a double loop
+        let start = std::time::Instant::now();
+        let count_non_quadtree = points
+            .iter()
+            .filter(|point| {
+                points
+                    .iter()
+                    .filter(|other| point != other && point.distance(other) < 10.0)
+                    .count()
+                    > 0
+            })
+            .count();
+        let elapsed_non_quadtree = start.elapsed();
+        assert_ne!(
+            POINT_COUNT, count_non_quadtree,
+            "All points are close-by neighbours?"
+        );
+
+        // Now use the quadtree to count how many points have a neighbour within a distance of 10.0
+        // Reset the timer
+        let start = std::time::Instant::now();
+        let count_quadtree = points
+            .iter()
+            .filter(|&point| {
+                let query_region = CircleQuery::new(point.clone(), 10.0);
+                quadtree
+                    .query(&query_region)
+                    .filter(|other_point| *other_point != point)
+                    .count()
+                    > 0
+            })
+            .count();
+        let elapsed_quadtree = start.elapsed();
+
+        dbg!(elapsed_non_quadtree);
+        dbg!(elapsed_quadtree);
+        dbg!(count_quadtree);
+
+        // Quad tree should be faster than non-quadtree but find the same number of points
+        assert_eq!(count_quadtree, count_non_quadtree);
+        assert!(elapsed_quadtree < elapsed_non_quadtree);
     }
 }

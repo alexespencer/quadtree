@@ -1,7 +1,7 @@
 use crate::{interval::Interval, point::Point, query::Query};
 use itertools::Itertools;
 
-/// A region in n-dimensional space defined by a set of intervals.
+/// A region in n-dimensional space defined by a Vec of intervals.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Region {
     intervals: Vec<Interval>,
@@ -56,6 +56,8 @@ impl Region {
     }
 }
 
+/// We can trivially implement [Query] for [Region]
+/// This allows us to use Region in a QuadTree query
 impl Query for Region {
     fn region(&self) -> &Region {
         self

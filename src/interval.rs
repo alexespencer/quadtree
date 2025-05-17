@@ -29,8 +29,8 @@ impl Interval {
         self.start <= value && value < self.end
     }
 
+    /// Subdivides the Interval at the mid-point
     pub fn subdivide(&self) -> Vec<Self> {
-        // Split down the middle
         let midpoint = self.start.midpoint(self.end);
         vec![
             Interval {
@@ -88,12 +88,16 @@ mod tests {
     #[test]
     fn test_interval_intersects() {
         let interval_a = Interval::try_new(1.0, 5.0).unwrap();
+        // b intersects with a
         let interval_b = Interval::try_new(4.0, 6.0).unwrap();
+        // c should not intersect with b's end
         let interval_c = Interval::try_new(6.0, 8.0).unwrap();
+        // d should not intersect with a
         let interval_d = Interval::try_new(5.0, 7.0).unwrap();
 
         assert!(interval_a.intersects(&interval_b));
         assert!(!interval_a.intersects(&interval_c));
+        assert!(!interval_b.intersects(&interval_c));
         assert!(!interval_d.intersects(&interval_a));
     }
 }

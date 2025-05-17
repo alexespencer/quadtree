@@ -1,17 +1,47 @@
-use crate::{point::Point, region::Region};
+use crate::{interval::Interval, point::Point, region::Region};
 
-/// A trait for querying a region with a point.
-/// This is trivial for the existing [Region] struct,
-/// but can be extended for other types of queries.
+/// [Query] is trait that allows for querying a region in n-dimensional space.
+/// This is trivial for the existing [Region] struct, but can be extended for other types of queries.
 ///
-/// For example, a circle query could be implemented
-/// by creating a new struct that implements this trait.
-/// The region should be the bounding box of the circle
-/// and the `contains` method would check if the point
-/// is within the circle.
+/// For example, [CircleQuery] is be implemented by creating a new struct that implements this trait.
+/// The region should be the bounding box of the circle and the `contains` method
+/// would check if the point is within the circle.
 pub trait Query {
     fn region(&self) -> &Region;
     fn contains<T: Copy + Into<f64>>(&self, point: &Point<T>) -> bool;
+}
+
+pub struct CircleQuery {
+    center: Point<f64>,
+    radius: f64,
+    region: Region,
+}
+
+impl CircleQuery {
+    pub fn new(center: Point<f64>, radius: f64) -> Self {
+        let center_f64 = center.dimension_values();
+        let intervals = vec![
+            Interval::try_new(center_f64[0] - radius, center_f64[0] + radius).unwrap(),
+            Interval::try_new(center_f64[1] - radius, center_f64[1] + radius).unwrap(),
+        ];
+        let region = Region::new(intervals);
+        CircleQuery {
+            center,
+            radius,
+            region,
+        }
+    }
+}
+
+impl Query for CircleQuery {
+    fn region(&self) -> &Region {
+        &self.region
+    }
+
+    fn contains<T: Copy + Into<f64>>(&self, point: &Point<T>) -> bool {
+        let distance = self.center.distance(&point.to_f64_point());
+        distance <= self.radius
+    }
 }
 
 #[cfg(test)]
@@ -26,39 +56,6 @@ mod tests {
         interval::Interval,
         quadtree::{QuadTree, Storable},
     };
-
-    struct CircleQuery {
-        center: Point<f64>,
-        radius: f64,
-        region: Region,
-    }
-
-    impl CircleQuery {
-        fn new(center: Point<f64>, radius: f64) -> Self {
-            let center_f64 = center.dimension_values();
-            let intervals = vec![
-                Interval::try_new(center_f64[0] - radius, center_f64[0] + radius).unwrap(),
-                Interval::try_new(center_f64[1] - radius, center_f64[1] + radius).unwrap(),
-            ];
-            let region = Region::new(intervals);
-            CircleQuery {
-                center,
-                radius,
-                region,
-            }
-        }
-    }
-
-    impl Query for CircleQuery {
-        fn region(&self) -> &Region {
-            &self.region
-        }
-
-        fn contains<T: Copy + Into<f64>>(&self, point: &Point<T>) -> bool {
-            let distance = self.center.distance(&point.to_f64_point());
-            distance <= self.radius
-        }
-    }
 
     pub struct TestStruct(Point<i32>);
     impl Storable<TestStruct> for TestStruct {
