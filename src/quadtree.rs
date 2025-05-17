@@ -2,18 +2,18 @@ use crate::{point::Point, query::Query, region::Region};
 use eyre::{OptionExt, Result, bail};
 use std::num::NonZero;
 
-pub trait Storable<T, V> {
-    fn point(&self) -> Point<T>;
+pub trait Storable<V> {
+    fn point(&self) -> Point<f64>;
     fn item(&self) -> &V;
 }
 
-pub struct QuadTree<T, V> {
+pub struct QuadTree<V> {
     region: Region,
-    subtrees: Option<Vec<QuadTree<T, V>>>,
-    points: Vec<Box<dyn Storable<T, V>>>,
+    subtrees: Option<Vec<QuadTree<V>>>,
+    points: Vec<Box<dyn Storable<V>>>,
 }
 
-impl<T: Copy + Into<f64>, V> QuadTree<T, V> {
+impl<V> QuadTree<V> {
     pub fn new(region: Region, max_points: NonZero<usize>) -> Self {
         QuadTree {
             region,
@@ -22,7 +22,8 @@ impl<T: Copy + Into<f64>, V> QuadTree<T, V> {
         }
     }
 
-    pub fn insert(&mut self, point: impl Storable<T, V> + 'static) -> Result<()> {
+    // TODO(alex.spencer): change 'static to clone or sized or owned?
+    pub fn insert(&mut self, point: impl Storable<V> + 'static) -> Result<()> {
         let point = Box::new(point);
 
         if self.points.len() < self.points.capacity() {
@@ -94,9 +95,9 @@ mod tests {
     use crate::{interval::Interval, point::Point};
 
     pub struct TestStruct(Point<i32>, String);
-    impl Storable<i32, TestStruct> for TestStruct {
-        fn point(&self) -> Point<i32> {
-            self.0.clone()
+    impl Storable<TestStruct> for TestStruct {
+        fn point(&self) -> Point<f64> {
+            self.0.to_f64_point()
         }
 
         fn item(&self) -> &Self {
@@ -122,7 +123,7 @@ mod tests {
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
-        let _: QuadTree<u32, String> = QuadTree::new(region, NonZero::new(4).unwrap());
+        let _: QuadTree<String> = QuadTree::new(region, NonZero::new(4).unwrap());
     }
 
     #[test]

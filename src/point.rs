@@ -1,8 +1,8 @@
 /// Point represents a point in n-dimensional space.
 #[derive(Debug, Clone)]
-pub struct Point<T>(Vec<T>);
+pub struct Point<T: Copy + Into<f64>>(Vec<T>);
 
-impl<T> Point<T> {
+impl<T: Copy + Into<f64>> Point<T> {
     pub fn new(vec: Vec<T>) -> Point<T> {
         Point(vec)
     }
@@ -15,10 +15,7 @@ impl<T> Point<T> {
         self.0.len()
     }
 
-    pub fn distance(&self, other: &Point<T>) -> f64
-    where
-        T: Copy + Into<f64>,
-    {
+    pub fn distance(&self, other: &Point<T>) -> f64 {
         if self.0.len() != other.0.len() {
             panic!("Points must have the same dimension");
         }
@@ -32,9 +29,7 @@ impl<T> Point<T> {
             .sum::<f64>()
             .sqrt()
     }
-}
 
-impl<T: Copy + Into<f64>> Point<T> {
     pub fn to_f64_point(&self) -> Point<f64> {
         let vec = self.0.iter().map(|&x| x.into()).collect();
         Point(vec)

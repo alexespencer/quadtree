@@ -61,9 +61,9 @@ mod tests {
     }
 
     pub struct TestStruct(Point<i32>);
-    impl Storable<i32, TestStruct> for TestStruct {
-        fn point(&self) -> Point<i32> {
-            self.0.clone()
+    impl Storable<TestStruct> for TestStruct {
+        fn point(&self) -> Point<f64> {
+            self.0.to_f64_point()
         }
 
         fn item(&self) -> &Self {
