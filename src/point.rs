@@ -1,4 +1,4 @@
-use crate::quadtree::Storable;
+use crate::{quadtree::Storable, query::CircleQuery};
 
 /// Point represents a point in n-dimensional space.
 #[derive(Debug, Clone, PartialEq)]
@@ -30,6 +30,10 @@ impl Point {
             })
             .sum::<f64>()
             .sqrt()
+    }
+
+    pub fn to_circle_query(&self, distance: f64) -> CircleQuery {
+        CircleQuery::new(self.clone(), distance)
     }
 }
 

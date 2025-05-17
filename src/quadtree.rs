@@ -40,8 +40,11 @@ pub trait Storable<V> {
 /// ]);
 ///
 /// let results: Vec<_> = quadtree.query(&query_region).collect();
-///
 /// assert_eq!(results.len(), 2);
+///
+/// // Alternatively, search around a point using a CircleQuery
+/// let circle_query = Point::new(vec![5.0, 5.0]).to_circle_query(3.0);
+/// let results: Vec<_> = quadtree.query(&circle_query).collect();
 /// ```
 pub struct QuadTree<V> {
     region: Region,
