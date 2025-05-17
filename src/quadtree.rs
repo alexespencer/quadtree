@@ -10,10 +10,10 @@ pub trait Storable<V> {
 pub struct QuadTree<V> {
     region: Region,
     subtrees: Option<Vec<QuadTree<V>>>,
-    points: Vec<Box<dyn Storable<V>>>,
+    points: Vec<V>,
 }
 
-impl<V> QuadTree<V> {
+impl<V: Storable<V>> QuadTree<V> {
     pub fn new(region: Region, max_points: NonZero<usize>) -> Self {
         QuadTree {
             region,
@@ -22,10 +22,7 @@ impl<V> QuadTree<V> {
         }
     }
 
-    // TODO(alex.spencer): change 'static to clone or sized or owned?
-    pub fn insert(&mut self, point: impl Storable<V> + 'static) -> Result<()> {
-        let point = Box::new(point);
-
+    pub fn insert(&mut self, point: V) -> Result<()> {
         if self.points.len() < self.points.capacity() {
             if !self.region.contains(&point.point()) {
                 bail!("Point is outside the region");
@@ -44,7 +41,7 @@ impl<V> QuadTree<V> {
             .ok_or_eyre("subtrees not created, this is a bug")?
         {
             if subtree.region.contains(&point.point()) {
-                return subtree.insert(*point);
+                return subtree.insert(point);
             }
         }
 
@@ -123,7 +120,7 @@ mod tests {
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
-        let _: QuadTree<String> = QuadTree::new(region, NonZero::new(4).unwrap());
+        let _: QuadTree<Point<f64>> = QuadTree::new(region, NonZero::new(4).unwrap());
     }
 
     #[test]

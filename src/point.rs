@@ -1,3 +1,5 @@
+use crate::quadtree::Storable;
+
 /// Point represents a point in n-dimensional space.
 #[derive(Debug, Clone)]
 pub struct Point<T: Copy + Into<f64>>(Vec<T>);
@@ -33,6 +35,17 @@ impl<T: Copy + Into<f64>> Point<T> {
     pub fn to_f64_point(&self) -> Point<f64> {
         let vec = self.0.iter().map(|&x| x.into()).collect();
         Point(vec)
+    }
+}
+
+// We can impl Storable for Point
+impl<T: Copy + Into<f64>> Storable<Point<T>> for Point<T> {
+    fn point(&self) -> Point<f64> {
+        self.to_f64_point()
+    }
+
+    fn item(&self) -> &Self {
+        self
     }
 }
 
