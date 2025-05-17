@@ -19,7 +19,7 @@ let region = Region::new(vec![
 // it implements the Storable trait.
 // Here we're deferring the type of the QuadTree to the compiler,
 // inferred from the first insert
-let mut quadtree = QuadTree::new(region, NonZero::new(4).unwrap());
+let mut quadtree = QuadTree::new(&region, NonZero::new(4).unwrap());
 
 // Insert points into the QuadTree
 for i in 0..4 {

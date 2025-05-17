@@ -95,7 +95,7 @@ mod tests {
         ]);
 
         // Capacity of 100 will ensure lots of subdivision when inserting 100,000 items
-        let mut quadtree = QuadTree::new(region, NonZero::new(100).unwrap());
+        let mut quadtree = QuadTree::new(&region, NonZero::new(100).unwrap());
         let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(42);
 
         for _ in 0..100_000 {

@@ -10,7 +10,7 @@ pub struct Interval {
 
 impl Interval {
     pub fn try_new(start: f64, end: f64) -> Result<Self> {
-        ensure!(start <= end, "Start must be less than or equal to end");
+        ensure!(start < end, "Start must be less to end");
         ensure!(start.is_finite(), "Start must be finite");
         ensure!(end.is_finite(), "End must be finite");
         Ok(Interval { start, end })
@@ -31,16 +31,20 @@ impl Interval {
     /// Subdivides the Interval at the mid-point
     pub fn subdivide(&self) -> Vec<Self> {
         let midpoint = self.start.midpoint(self.end);
-        vec![
-            Interval {
-                start: self.start,
-                end: midpoint,
-            },
-            Interval {
-                start: midpoint,
-                end: self.end,
-            },
-        ]
+        if self.start == midpoint {
+            vec![self.clone()]
+        } else {
+            vec![
+                Interval {
+                    start: self.start,
+                    end: midpoint,
+                },
+                Interval {
+                    start: midpoint,
+                    end: self.end,
+                },
+            ]
+        }
     }
 
     pub fn intersects(&self, other: &Self) -> bool {
@@ -50,6 +54,8 @@ impl Interval {
 
 #[cfg(test)]
 mod tests {
+    use core::f64;
+
     use super::*;
 
     #[test]
@@ -80,6 +86,16 @@ mod tests {
         } else {
             panic!("Expected exactly two intervals after subdivision");
         }
+    }
+
+    #[test]
+    fn test_interval_subdivide_epsilon() {
+        // Trying to subdivide something that cannot be divided should only yield itself
+        let interval = Interval::try_new(1.0, 1.0 + f64::EPSILON).unwrap();
+        let subdivided = interval.subdivide();
+        assert_eq!(subdivided.len(), 1);
+        let first = subdivided.first().unwrap();
+        assert_eq!(first, &interval);
     }
 
     #[test]

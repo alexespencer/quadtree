@@ -26,7 +26,7 @@ pub trait Storable<V, const N: usize> {
 /// // should store. You can store any Struct in the QuadTree as long as it implements the Storable trait.
 /// // Here we're deferring the type of the QuadTree to the compiler,
 /// // inferred from the first insert
-/// let mut quadtree = QuadTree::new(region, NonZero::new(4).unwrap());
+/// let mut quadtree = QuadTree::new(&region, NonZero::new(4).unwrap());
 ///
 /// // Insert points into the QuadTree
 /// for i in 0..4 {
@@ -54,9 +54,9 @@ pub struct QuadTree<const N: usize, V> {
 
 impl<const N: usize, V: Storable<V, N>> QuadTree<N, V> {
     /// Create a new [QuadTree] with the given region and maximum number of points.
-    pub fn new(region: Region, max_points: NonZero<usize>) -> Self {
+    pub fn new(region: &Region, max_points: NonZero<usize>) -> Self {
         QuadTree {
-            region,
+            region: region.clone(),
             subtrees: None,
             points: Vec::with_capacity(max_points.into()),
         }
@@ -98,7 +98,7 @@ impl<const N: usize, V: Storable<V, N>> QuadTree<N, V> {
                 .into_iter()
                 .map(|region| {
                     QuadTree::new(
-                        Region::new(region),
+                        &Region::new(region),
                         NonZero::new(self.points.capacity()).expect("non-zero capacity"),
                     )
                 })
@@ -129,6 +129,7 @@ impl<const N: usize, V: Storable<V, N>> QuadTree<N, V> {
 
 #[cfg(test)]
 mod tests {
+    use itertools::Itertools;
     use rand::{Rng, SeedableRng};
 
     use super::*;
@@ -151,7 +152,7 @@ mod tests {
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
-        let mut quadtree = QuadTree::new(region, NonZero::new(4).unwrap());
+        let mut quadtree = QuadTree::new(&region, NonZero::new(4).unwrap());
 
         let point_outside = TestStruct(Point::new(&[11, 5]), "data".to_string());
         assert!(quadtree.insert(point_outside).is_err());
@@ -163,7 +164,7 @@ mod tests {
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
-        let _: QuadTree<2, TestStruct> = QuadTree::new(region, NonZero::new(4).unwrap());
+        let _: QuadTree<2, TestStruct> = QuadTree::new(&region, NonZero::new(4).unwrap());
     }
 
     #[test]
@@ -172,7 +173,7 @@ mod tests {
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
-        let mut quadtree = QuadTree::new(region, NonZero::new(4).unwrap());
+        let mut quadtree = QuadTree::new(&region, NonZero::new(4).unwrap());
 
         for i in 0..4 {
             quadtree
@@ -190,7 +191,7 @@ mod tests {
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
-        let mut quadtree = QuadTree::new(region, NonZero::new(4).unwrap());
+        let mut quadtree = QuadTree::new(&region, NonZero::new(4).unwrap());
 
         for i in 0..4 {
             quadtree
@@ -232,7 +233,7 @@ mod tests {
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
-        let mut quadtree = QuadTree::new(region, NonZero::new(4).unwrap());
+        let mut quadtree = QuadTree::new(&region, NonZero::new(4).unwrap());
 
         for i in 0..4 {
             quadtree
@@ -258,7 +259,7 @@ mod tests {
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
         // Capacity of 2 will ensure lots of subdivision when inserting 10 items
-        let mut quadtree = QuadTree::new(region, NonZero::new(2).unwrap());
+        let mut quadtree = QuadTree::new(&region, NonZero::new(2).unwrap());
 
         for i in 0..10 {
             quadtree
@@ -285,7 +286,7 @@ mod tests {
         ]);
 
         // Capacity of 100 will ensure lots of subdivision when inserting 100,000 items
-        let mut quadtree = QuadTree::new(region, NonZero::new(100).unwrap());
+        let mut quadtree = QuadTree::new(&region, NonZero::new(100).unwrap());
         let mut rng = rand_chacha::ChaCha8Rng::seed_from_u64(42);
 
         for _ in 0..100_000 {
@@ -309,6 +310,38 @@ mod tests {
     }
 
     #[test]
+    fn test_quadtree_single_point_interval() {
+        const COUNT: usize = 10;
+        // Create a quadtree where the region is a single point
+        let region = Region::new(vec![
+            Interval::try_new(1.0, 1.0 + f64::EPSILON).unwrap(),
+            Interval::try_new(1.0, 1.0 + f64::EPSILON).unwrap(),
+        ]);
+        let mut quadtree = QuadTree::new(&region, NonZero::new(1).unwrap());
+
+        // Insert 10 points into the quadtree
+        for i in 0..COUNT {
+            quadtree
+                .insert(TestStruct(Point::new(&[1.0, 1.0]), format!("P{}", i)))
+                .unwrap();
+        }
+
+        // Query the quadtree
+        let results: Vec<_> = quadtree.query(&region).collect();
+        assert_eq!(results.len(), 10);
+        // Assert there are 10 unique strings
+        let unique_results: Vec<_> = results.iter().map(|item| item.item().1.clone()).collect();
+        assert_eq!(
+            unique_results
+                .into_iter()
+                .unique()
+                .collect::<Vec<_>>()
+                .len(),
+            COUNT
+        );
+    }
+
+    #[test]
     fn perf_smoke_test_neighbours() {
         const POINT_COUNT: usize = 2000;
         // Create a Vec of random points
@@ -322,7 +355,7 @@ mod tests {
             Interval::try_new(0.0, 1000.0).unwrap(),
             Interval::try_new(0.0, 1000.0).unwrap(),
         ]);
-        let mut quadtree = QuadTree::new(region, NonZero::new(10).unwrap());
+        let mut quadtree = QuadTree::new(&region, NonZero::new(10).unwrap());
         for point in &points {
             quadtree.insert(point.clone()).unwrap();
         }
@@ -385,7 +418,7 @@ mod tests {
             Interval::try_new(0.0, 1000.0).unwrap(),
             Interval::try_new(0.0, 1000.0).unwrap(),
         ]);
-        let mut quadtree = QuadTree::new(region, NonZero::new(10).unwrap());
+        let mut quadtree = QuadTree::new(&region, NonZero::new(10).unwrap());
         for point in &points {
             quadtree.insert(point.clone()).unwrap();
         }
