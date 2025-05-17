@@ -6,19 +6,19 @@ use crate::{interval::Interval, point::Point, region::Region};
 /// For example, [CircleQuery] is be implemented by creating a new struct that implements this trait.
 /// The region should be the bounding box of the circle and the `contains` method
 /// would check if the point is within the circle.
-pub trait Query {
+pub trait Query<const N: usize> {
     fn region(&self) -> &Region;
-    fn contains(&self, point: &Point) -> bool;
+    fn contains(&self, point: &Point<N>) -> bool;
 }
 
-pub struct CircleQuery {
-    center: Point,
+pub struct CircleQuery<const N: usize> {
+    center: Point<N>,
     radius: f64,
     region: Region,
 }
 
-impl CircleQuery {
-    pub fn new(center: Point, radius: f64) -> Self {
+impl<const N: usize> CircleQuery<N> {
+    pub fn new(center: Point<N>, radius: f64) -> Self {
         let center_f64 = center.dimension_values();
         let intervals = vec![
             Interval::try_new(center_f64[0] - radius, center_f64[0] + radius).unwrap(),
@@ -33,13 +33,13 @@ impl CircleQuery {
     }
 }
 
-impl Query for CircleQuery {
+impl<const N: usize> Query<N> for CircleQuery<N> {
     fn region(&self) -> &Region {
         &self.region
     }
 
-    fn contains(&self, point: &Point) -> bool {
-        let distance = self.center.distance(&point);
+    fn contains(&self, point: &Point<N>) -> bool {
+        let distance = self.center.distance(point);
         distance <= self.radius
     }
 }
@@ -57,9 +57,9 @@ mod tests {
         quadtree::{QuadTree, Storable},
     };
 
-    pub struct TestStruct(Point);
-    impl Storable<TestStruct> for TestStruct {
-        fn point(&self) -> &Point {
+    pub struct TestStruct(Point<2>);
+    impl Storable<TestStruct, 2> for TestStruct {
+        fn point(&self) -> &Point<2> {
             &self.0
         }
 
@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn test_circle_query() {
-        let center = Point::new(vec![5.0, 5.0]);
+        let center = Point::new(&[5.0, 5.0]);
         let radius = 3.0;
         let circle_query = CircleQuery::new(center.clone(), radius);
 
@@ -82,10 +82,10 @@ mod tests {
             ])
         );
 
-        let point_inside = Point::new(vec![6.0, 6.0]);
+        let point_inside = Point::new(&[6.0, 6.0]);
         assert!(circle_query.contains(&point_inside));
 
-        let point_outside = Point::new(vec![9.0, 9.0]);
+        let point_outside = Point::new(&[9.0, 9.0]);
         assert!(!circle_query.contains(&point_outside));
 
         // Test with quadtree (we can assert the value is almost PI!)
@@ -102,7 +102,7 @@ mod tests {
             // Choose random x and y coordinates
             let x = rng.random_range(0..100);
             let y = rng.random_range(0..100);
-            quadtree.insert(TestStruct(Point::new(vec![x, y]))).unwrap();
+            quadtree.insert(TestStruct(Point::new(&[x, y]))).unwrap();
         }
 
         // Construct query region
@@ -113,7 +113,7 @@ mod tests {
         let square_count = quadtree.query(&square_region).collect::<Vec<_>>().len();
 
         // Construct circle query
-        let circle_query = CircleQuery::new(Point::new(vec![50.0, 50.0]), 50.0);
+        let circle_query = CircleQuery::new(Point::new(&[50.0, 50.0]), 50.0);
         let circle_count = quadtree.query(&circle_query).collect::<Vec<_>>().len();
         assert_ne!(circle_count, square_count);
         assert_abs_diff_eq!(

@@ -23,7 +23,7 @@ let mut quadtree = QuadTree::new(region, NonZero::new(4).unwrap());
 
 // Insert points into the QuadTree
 for i in 0..4 {
-    quadtree.insert(Point::new(vec![i, 0])).unwrap();
+    quadtree.insert(Point::new(&[i, 0])).unwrap();
 }
 
 // To query the QuadTree, provide a region, or anything that implements the Query trait
