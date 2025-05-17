@@ -2,8 +2,8 @@ use crate::{point::Point, query::Query, region::Region};
 use eyre::{OptionExt, Result, bail};
 use std::num::NonZero;
 
-pub trait Storable<V> {
-    fn point(&self) -> &Point;
+pub trait Storable<V, const N: usize> {
+    fn point(&self) -> &Point<N>;
     fn item(&self) -> &V;
 }
 
@@ -30,7 +30,7 @@ pub trait Storable<V> {
 ///
 /// // Insert points into the QuadTree
 /// for i in 0..4 {
-///     quadtree.insert(Point::new(vec![i, 0])).unwrap();
+///     quadtree.insert(Point::new(&[i, 0])).unwrap();
 /// }
 ///
 /// // To query the QuadTree, provide a region, or anything that implements the Query trait
@@ -43,16 +43,16 @@ pub trait Storable<V> {
 /// assert_eq!(results.len(), 2);
 ///
 /// // Alternatively, search around a point using a CircleQuery
-/// let circle_query = Point::new(vec![5.0, 5.0]).to_circle_query(3.0);
+/// let circle_query = Point::new(&[5.0, 5.0]).to_circle_query(3.0);
 /// let results: Vec<_> = quadtree.query(&circle_query).collect();
 /// ```
-pub struct QuadTree<V> {
+pub struct QuadTree<const N: usize, V> {
     region: Region,
-    subtrees: Option<Vec<QuadTree<V>>>,
+    subtrees: Option<Vec<QuadTree<N, V>>>,
     points: Vec<V>,
 }
 
-impl<V: Storable<V>> QuadTree<V> {
+impl<const N: usize, V: Storable<V, N>> QuadTree<N, V> {
     /// Create a new [QuadTree] with the given region and maximum number of points.
     pub fn new(region: Region, max_points: NonZero<usize>) -> Self {
         QuadTree {
@@ -109,7 +109,7 @@ impl<V: Storable<V>> QuadTree<V> {
     /// Query the [QuadTree] with a region (any type that implements the [Query] trait).
     pub fn query<'a, Q>(&'a self, query: &'a Q) -> Box<dyn Iterator<Item = &'a V> + 'a>
     where
-        Q: Query + 'a,
+        Q: Query<N> + 'a,
     {
         let my_iter = self
             .points
@@ -134,9 +134,9 @@ mod tests {
     use super::*;
     use crate::{interval::Interval, point::Point, query::CircleQuery};
 
-    pub struct TestStruct(Point, String);
-    impl Storable<TestStruct> for TestStruct {
-        fn point(&self) -> &Point {
+    pub struct TestStruct(Point<2>, String);
+    impl Storable<TestStruct, 2> for TestStruct {
+        fn point(&self) -> &Point<2> {
             &self.0
         }
 
@@ -153,7 +153,7 @@ mod tests {
         ]);
         let mut quadtree = QuadTree::new(region, NonZero::new(4).unwrap());
 
-        let point_outside = TestStruct(Point::new(vec![11, 5]), "data".to_string());
+        let point_outside = TestStruct(Point::new(&[11, 5]), "data".to_string());
         assert!(quadtree.insert(point_outside).is_err());
     }
 
@@ -163,7 +163,7 @@ mod tests {
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
-        let _: QuadTree<Point> = QuadTree::new(region, NonZero::new(4).unwrap());
+        let _: QuadTree<2, TestStruct> = QuadTree::new(region, NonZero::new(4).unwrap());
     }
 
     #[test]
@@ -176,7 +176,7 @@ mod tests {
 
         for i in 0..4 {
             quadtree
-                .insert(TestStruct(Point::new(vec![i, 0]), "data".to_string()))
+                .insert(TestStruct(Point::new(&[i, 0]), "data".to_string()))
                 .unwrap();
         }
 
@@ -194,7 +194,7 @@ mod tests {
 
         for i in 0..4 {
             quadtree
-                .insert(TestStruct(Point::new(vec![i, 0]), "data".to_string()))
+                .insert(TestStruct(Point::new(&[i, 0]), "data".to_string()))
                 .unwrap();
         }
 
@@ -204,7 +204,7 @@ mod tests {
         // Insert one more point to trigger subdivision
         quadtree
             .insert(TestStruct(
-                Point::new(vec![5, 5]),
+                Point::new(&[5, 5]),
                 "data_subdivided".to_string(),
             ))
             .unwrap();
@@ -236,7 +236,7 @@ mod tests {
 
         for i in 0..4 {
             quadtree
-                .insert(TestStruct(Point::new(vec![i, 0]), "data".to_string()))
+                .insert(TestStruct(Point::new(&[i, 0]), "data".to_string()))
                 .unwrap();
         }
 
@@ -262,7 +262,7 @@ mod tests {
 
         for i in 0..10 {
             quadtree
-                .insert(TestStruct(Point::new(vec![i, 0]), "data".to_string()))
+                .insert(TestStruct(Point::new(&[i, 0]), "data".to_string()))
                 .unwrap();
         }
 
@@ -293,7 +293,7 @@ mod tests {
             let x = rng.random_range(0..100);
             let y = rng.random_range(0..100);
             quadtree
-                .insert(TestStruct(Point::new(vec![x, y]), "data".to_string()))
+                .insert(TestStruct(Point::new(&[x, y]), "data".to_string()))
                 .unwrap();
         }
 
@@ -313,13 +313,8 @@ mod tests {
         const POINT_COUNT: usize = 2000;
         // Create a Vec of random points
         let mut rng = rand::rng();
-        let points: Vec<Point> = (0..POINT_COUNT)
-            .map(|_| {
-                Point::new(vec![
-                    rng.random_range(0.0..1000.0),
-                    rng.random_range(0.0..1000.0),
-                ])
-            })
+        let points: Vec<Point<2>> = (0..POINT_COUNT)
+            .map(|_| Point::new(&[rng.random_range(0.0..1000.0), rng.random_range(0.0..1000.0)]))
             .collect();
 
         // Create a QuadTree with a region that covers the points
@@ -381,13 +376,8 @@ mod tests {
         const POINT_COUNT: usize = 100000;
         // Create a Vec of random points
         let mut rng = rand::rng();
-        let points: Vec<Point> = (0..POINT_COUNT)
-            .map(|_| {
-                Point::new(vec![
-                    rng.random_range(0.0..1000.0),
-                    rng.random_range(0.0..1000.0),
-                ])
-            })
+        let points: Vec<Point<2>> = (0..POINT_COUNT)
+            .map(|_| Point::new(&[rng.random_range(0.0..1000.0), rng.random_range(0.0..1000.0)]))
             .collect();
 
         // Create a QuadTree with a region that covers the points

@@ -16,7 +16,7 @@ impl Region {
         &self.intervals
     }
 
-    pub fn contains(&self, point: &Point) -> bool {
+    pub fn contains<const N: usize>(&self, point: &Point<N>) -> bool {
         assert!(
             self.intervals.len() == point.dimensions(),
             "Point dimension {} does not match region dimension {}",
@@ -58,12 +58,12 @@ impl Region {
 
 /// We can trivially implement [Query] for [Region]
 /// This allows us to use Region in a QuadTree query
-impl Query for Region {
+impl<const N: usize> Query<N> for Region {
     fn region(&self) -> &Region {
         self
     }
 
-    fn contains(&self, point: &Point) -> bool {
+    fn contains(&self, point: &Point<N>) -> bool {
         self.contains(point)
     }
 }
@@ -80,9 +80,9 @@ mod tests {
         let region = Region::new(vec![single_axis]);
         assert_eq!(region.intervals().len(), 1);
 
-        let point = Point::new(vec![3]);
+        let point = Point::new(&[3]);
         assert!(region.contains(&point));
-        let point_outside = Point::new(vec![6]);
+        let point_outside = Point::new(&[6]);
         assert!(!region.contains(&point_outside));
     }
 
@@ -91,7 +91,7 @@ mod tests {
     fn test_region_1d_panic() {
         let single_axis = Interval::try_new(1.0, 5.0).unwrap();
         let region = Region::new(vec![single_axis]);
-        let point = Point::new(vec![3, 4]);
+        let point = Point::new(&[3, 4]);
         region.contains(&point);
     }
 
