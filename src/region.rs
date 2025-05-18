@@ -16,7 +16,7 @@ impl<const N: usize> Region<N> {
             intervals.len() == N,
             "cannot create region of size {} from Vec of size {}",
             N,
-            &intervals.len()
+            intervals.len()
         );
         Ok(Region(
             intervals
