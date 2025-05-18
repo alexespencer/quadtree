@@ -59,8 +59,10 @@ impl<const N: usize> Point<N> {
             .sum::<f64>()
             .sqrt()
     }
+}
 
-    pub fn to_circle_query(&self, distance: f64) -> CircleQuery<N> {
+impl Point<2> {
+    pub fn to_circle_query(&self, distance: f64) -> CircleQuery<2> {
         CircleQuery::new(self.clone(), distance)
     }
 }

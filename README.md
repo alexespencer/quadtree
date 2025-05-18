@@ -9,7 +9,7 @@ use quadtree::{interval::Interval, point::Point, quadtree::QuadTree, region::Reg
 use std::num::NonZero;
         
 // Create a region, the bounds of the quadtree
-let region = Region::new(vec![
+let region = Region::new(&[
     Interval::try_new(0.0, 10.0).unwrap(), // X-axis
     Interval::try_new(0.0, 10.0).unwrap(), // Y-axis
 ]);
@@ -27,7 +27,7 @@ for i in 0..4 {
 }
 
 // To query the QuadTree, provide a region, or anything that implements the Query trait
-let query_region = Region::new(vec![
+let query_region = Region::new(&[
     Interval::try_new(0.0, 2.0).unwrap(),
     Interval::try_new(0.0, 10.0).unwrap(),
 ]);

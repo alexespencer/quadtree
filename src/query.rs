@@ -7,24 +7,24 @@ use crate::{interval::Interval, point::Point, region::Region};
 /// The region should be the bounding box of the circle and the `contains` method
 /// would check if the point is within the circle.
 pub trait Query<const N: usize> {
-    fn region(&self) -> &Region;
+    fn region(&self) -> &Region<N>;
     fn contains(&self, point: &Point<N>) -> bool;
 }
 
 pub struct CircleQuery<const N: usize> {
     center: Point<N>,
     radius: f64,
-    region: Region,
+    region: Region<N>,
 }
 
-impl<const N: usize> CircleQuery<N> {
-    pub fn new(center: Point<N>, radius: f64) -> Self {
+impl CircleQuery<2> {
+    pub fn new(center: Point<2>, radius: f64) -> Self {
         let center_f64 = center.dimension_values();
-        let intervals = vec![
+        let intervals = [
             Interval::try_new(center_f64[0] - radius, center_f64[0] + radius).unwrap(),
             Interval::try_new(center_f64[1] - radius, center_f64[1] + radius).unwrap(),
         ];
-        let region = Region::new(intervals);
+        let region = Region::new(&intervals);
         CircleQuery {
             center,
             radius,
@@ -34,7 +34,7 @@ impl<const N: usize> CircleQuery<N> {
 }
 
 impl<const N: usize> Query<N> for CircleQuery<N> {
-    fn region(&self) -> &Region {
+    fn region(&self) -> &Region<N> {
         &self.region
     }
 
@@ -76,7 +76,7 @@ mod tests {
 
         assert_eq!(
             circle_query.region(),
-            &Region::new(vec![
+            &Region::new(&[
                 Interval::try_new(2.0, 8.0).unwrap(),
                 Interval::try_new(2.0, 8.0).unwrap(),
             ])
@@ -89,7 +89,7 @@ mod tests {
         assert!(!circle_query.contains(&point_outside));
 
         // Test with quadtree (we can assert the value is almost PI!)
-        let region = Region::new(vec![
+        let region = Region::new(&[
             Interval::try_new(0.0, 100.0).unwrap(),
             Interval::try_new(0.0, 100.0).unwrap(),
         ]);
@@ -106,7 +106,7 @@ mod tests {
         }
 
         // Construct query region
-        let square_region = Region::new(vec![
+        let square_region = Region::new(&[
             Interval::try_new(0.0, 100.0).unwrap(),
             Interval::try_new(0.0, 100.0).unwrap(),
         ]);
