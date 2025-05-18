@@ -8,7 +8,7 @@ pub struct Region<const N: usize>([Interval; N]);
 
 impl<const N: usize> Region<N> {
     pub fn new(intervals: &[Interval; N]) -> Self {
-        Region(intervals.clone())
+        Region((*intervals).clone())
     }
 
     pub fn try_new(intervals: &Vec<Interval>) -> Result<Self> {
