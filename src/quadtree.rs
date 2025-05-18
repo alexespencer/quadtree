@@ -385,7 +385,7 @@ mod tests {
         let count_quadtree = points
             .iter()
             .filter(|&point| {
-                let query_region = DistanceQuery::new(point.clone(), 10.0);
+                let query_region = DistanceQuery::new(point, 10.0);
                 quadtree
                     .query(&query_region)
                     .filter(|other_point| *other_point != point)

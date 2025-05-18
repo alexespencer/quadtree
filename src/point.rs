@@ -61,7 +61,7 @@ impl<const N: usize> Point<N> {
     }
 
     pub fn to_distance_based_query(&self, distance: f64) -> DistanceQuery<N> {
-        DistanceQuery::new(self.clone(), distance)
+        DistanceQuery::new(self, distance)
     }
 }
 

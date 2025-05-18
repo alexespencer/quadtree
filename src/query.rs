@@ -20,7 +20,7 @@ pub struct DistanceQuery<const N: usize> {
 }
 
 impl<const N: usize> DistanceQuery<N> {
-    pub fn new(center: Point<N>, radius: f64) -> Self {
+    pub fn new(center: &Point<N>, radius: f64) -> Self {
         let center_f64 = center.dimension_values();
         let intervals = center_f64
             .iter()
@@ -29,7 +29,7 @@ impl<const N: usize> DistanceQuery<N> {
             .expect("same sized array");
         let region = Region::new(&intervals);
         DistanceQuery {
-            center,
+            center: center.clone(),
             radius,
             region,
         }
@@ -75,7 +75,7 @@ mod tests {
     fn test_circle_query() {
         let center = Point::new(&[5.0, 5.0]);
         let radius = 3.0;
-        let circle_query = DistanceQuery::new(center.clone(), radius);
+        let circle_query = DistanceQuery::new(&center, radius);
 
         assert_eq!(
             circle_query.region(),
@@ -116,7 +116,7 @@ mod tests {
         let square_count = quadtree.query(&square_region).collect::<Vec<_>>().len();
 
         // Construct circle query
-        let circle_query = DistanceQuery::new(Point::new(&[50.0, 50.0]), 50.0);
+        let circle_query = DistanceQuery::new(&Point::new(&[50.0, 50.0]), 50.0);
         let circle_count = quadtree.query(&circle_query).collect::<Vec<_>>().len();
         assert_ne!(circle_count, square_count);
         assert_abs_diff_eq!(
