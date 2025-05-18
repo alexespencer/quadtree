@@ -1,37 +1,46 @@
 use crate::{interval::Interval, point::Point, query::Query};
+use eyre::{Result, ensure};
 use itertools::Itertools;
 
 /// A region in n-dimensional space defined by a Vec of intervals.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Region {
-    intervals: Vec<Interval>,
-}
+pub struct Region<const N: usize>([Interval; N]);
 
-impl Region {
-    pub fn new(intervals: Vec<Interval>) -> Self {
-        Region { intervals }
+impl<const N: usize> Region<N> {
+    pub fn new(intervals: &[Interval; N]) -> Self {
+        Region((*intervals).clone())
     }
 
-    pub fn intervals(&self) -> &Vec<Interval> {
-        &self.intervals
-    }
-
-    pub fn contains<const N: usize>(&self, point: &Point<N>) -> bool {
-        assert!(
-            self.intervals.len() == point.dimensions(),
-            "Point dimension {} does not match region dimension {}",
-            point.dimensions(),
-            self.intervals.len()
+    pub fn try_new(intervals: &Vec<Interval>) -> Result<Self> {
+        ensure!(
+            intervals.len() == N,
+            "cannot create region of size {} from Vec of size {}",
+            N,
+            intervals.len()
         );
-        self.intervals
+        Ok(Region(
+            intervals
+                .iter()
+                .cloned()
+                .collect_array()
+                .expect("same sized array"),
+        ))
+    }
+
+    pub fn intervals(&self) -> &[Interval; N] {
+        &self.0
+    }
+
+    pub fn contains(&self, point: &Point<N>) -> bool {
+        self.intervals()
             .iter()
             .zip(point.dimension_values())
             .all(|(interval, value)| interval.contains(value))
     }
 
-    pub fn subdivide(&self) -> Vec<Vec<Interval>> {
+    pub fn subdivide(&self) -> Vec<[Interval; N]> {
         let iterators = self
-            .intervals
+            .intervals()
             .iter()
             .map(|interval| interval.subdivide())
             .collect::<Vec<_>>();
@@ -40,26 +49,27 @@ impl Region {
             .iter()
             .map(|v| v.iter().cloned())
             .multi_cartesian_product()
-            .map(|product| product.into_iter().collect())
+            .map(|product| {
+                product
+                    .into_iter()
+                    .collect_array()
+                    .expect("same sized array")
+            })
             .collect::<Vec<_>>()
     }
 
-    pub fn intersects(&self, other: &Region) -> bool {
-        assert!(
-            self.intervals.len() == other.intervals.len(),
-            "Regions must have the same number of dimensions"
-        );
-        self.intervals
+    pub fn intersects(&self, other: &Region<N>) -> bool {
+        self.intervals()
             .iter()
-            .zip(other.intervals.iter())
+            .zip(other.intervals().iter())
             .all(|(a, b)| a.intersects(b))
     }
 }
 
 /// We can trivially implement [Query] for [Region]
 /// This allows us to use Region in a QuadTree query
-impl<const N: usize> Query<N> for Region {
-    fn region(&self) -> &Region {
+impl<const N: usize> Query<N> for Region<N> {
+    fn region(&self) -> &Region<N> {
         self
     }
 
@@ -67,6 +77,28 @@ impl<const N: usize> Query<N> for Region {
         self.contains(point)
     }
 }
+
+/// Demonstrates region containment with correct and incorrect point dimensions.
+///
+/// This compiles:
+/// ```
+/// use quadtree::{interval::Interval, point::Point, region::Region};
+/// let axis = Interval::try_new(1.0, 5.0).unwrap();
+/// let region = Region::new(&[axis]);
+/// let point = Point::new(&[3.0]);
+/// assert!(region.contains(&point));
+/// ```
+///
+/// This fails to compile due to a dimension mismatch:
+/// ```compile_fail
+/// use quadtree::{interval::Interval, point::Point, region::Region};
+/// let axis = Interval::try_new(1.0, 5.0).unwrap();
+/// let region = Region::new(&[axis]);
+/// let point = Point::new(&[3.0, 4.0]); // 2D point for 1D region
+/// region.contains(&point);
+/// ```
+#[allow(dead_code)]
+fn test_compile_fail_different_dimensions() {}
 
 #[cfg(test)]
 mod tests {
@@ -77,7 +109,7 @@ mod tests {
     #[test]
     fn test_region_1d() {
         let single_axis = Interval::try_new(1.0, 5.0).unwrap();
-        let region = Region::new(vec![single_axis]);
+        let region = Region::new(&[single_axis]);
         assert_eq!(region.intervals().len(), 1);
 
         let point = Point::new(&[3]);
@@ -87,19 +119,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Point dimension 2 does not match region dimension 1")]
-    fn test_region_1d_panic() {
-        let single_axis = Interval::try_new(1.0, 5.0).unwrap();
-        let region = Region::new(vec![single_axis]);
-        let point = Point::new(&[3, 4]);
-        region.contains(&point);
-    }
-
-    #[test]
     fn test_region_2d_subdivide() {
         let x_axis = Interval::try_new(1.0, 5.0).unwrap();
         let y_axis = Interval::try_new(20.0, 60.0).unwrap();
-        let region = Region::new(vec![x_axis, y_axis]);
+        let region = Region::new(&[x_axis, y_axis]);
         assert_eq!(region.intervals().len(), 2);
 
         // Assert there are 4 unique intervals after subdivision
@@ -127,7 +150,7 @@ mod tests {
         let x_axis = Interval::try_new(1.0, 5.0).unwrap();
         let y_axis = Interval::try_new(20.0, 60.0).unwrap();
         let z_axis = Interval::try_new(100.0, 200.0).unwrap();
-        let region = Region::new(vec![x_axis, y_axis, z_axis]);
+        let region = Region::new(&[x_axis, y_axis, z_axis]);
 
         // Assert there are 8 unique intervals after subdivision
         let subdivided_intervals = region.subdivide();

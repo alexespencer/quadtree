@@ -17,7 +17,7 @@ pub trait Storable<V, const N: usize> {
 /// use std::num::NonZero;
 ///         
 /// // Create a region, the bounds of the quadtree
-/// let region = Region::new(vec![
+/// let region = Region::new(&[
 ///     Interval::try_new(0.0, 10.0).unwrap(), // X-axis
 ///     Interval::try_new(0.0, 10.0).unwrap(), // Y-axis
 /// ]);
@@ -34,7 +34,7 @@ pub trait Storable<V, const N: usize> {
 /// }
 ///
 /// // To query the QuadTree, provide a region, or anything that implements the Query trait
-/// let query_region = Region::new(vec![
+/// let query_region = Region::new(&[
 ///     Interval::try_new(0.0, 2.0).unwrap(),
 ///     Interval::try_new(0.0, 10.0).unwrap(),
 /// ]);
@@ -42,19 +42,19 @@ pub trait Storable<V, const N: usize> {
 /// let results: Vec<_> = quadtree.query(&query_region).collect();
 /// assert_eq!(results.len(), 2);
 ///
-/// // Alternatively, search around a point using a CircleQuery
-/// let circle_query = Point::new(&[5.0, 5.0]).to_circle_query(3.0);
-/// let results: Vec<_> = quadtree.query(&circle_query).collect();
+/// // Alternatively, search around a point using a DistanceQuery
+/// let distance_query = Point::new(&[5.0, 5.0]).to_distance_based_query(3.0);
+/// let results: Vec<_> = quadtree.query(&distance_query).collect();
 /// ```
 pub struct QuadTree<const N: usize, V> {
-    region: Region,
+    region: Region<N>,
     subtrees: Option<Vec<QuadTree<N, V>>>,
     points: Vec<V>,
 }
 
 impl<const N: usize, V: Storable<V, N>> QuadTree<N, V> {
     /// Create a new [QuadTree] with the given region and maximum number of points.
-    pub fn new(region: &Region, max_points: NonZero<usize>) -> Self {
+    pub fn new(region: &Region<N>, max_points: NonZero<usize>) -> Self {
         QuadTree {
             region: region.clone(),
             subtrees: None,
@@ -98,7 +98,7 @@ impl<const N: usize, V: Storable<V, N>> QuadTree<N, V> {
                 .into_iter()
                 .map(|region| {
                     QuadTree::new(
-                        &Region::new(region),
+                        &Region::new(&region),
                         NonZero::new(self.points.capacity()).expect("non-zero capacity"),
                     )
                 })
@@ -133,7 +133,7 @@ mod tests {
     use rand::{Rng, SeedableRng};
 
     use super::*;
-    use crate::{interval::Interval, point::Point, query::CircleQuery};
+    use crate::{interval::Interval, point::Point, query::DistanceQuery};
 
     pub struct TestStruct(Point<2>, String);
     impl Storable<TestStruct, 2> for TestStruct {
@@ -148,7 +148,7 @@ mod tests {
 
     #[test]
     fn test_quadtree_insert_outside_region() {
-        let region = Region::new(vec![
+        let region = Region::new(&[
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
@@ -160,7 +160,7 @@ mod tests {
 
     #[test]
     fn test_quadtree_initialise() {
-        let region = Region::new(vec![
+        let region = Region::new(&[
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
@@ -169,7 +169,7 @@ mod tests {
 
     #[test]
     fn test_quadtree_insert_below_capacity() {
-        let region = Region::new(vec![
+        let region = Region::new(&[
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn test_quadtree_insert_above_capacity() {
-        let region = Region::new(vec![
+        let region = Region::new(&[
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
@@ -229,7 +229,7 @@ mod tests {
 
     #[test]
     fn test_quadtree_query() {
-        let region = Region::new(vec![
+        let region = Region::new(&[
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
@@ -242,7 +242,7 @@ mod tests {
         }
 
         // Construct query region that should only contain only the first two points
-        let query_region = Region::new(vec![
+        let query_region = Region::new(&[
             Interval::try_new(0.0, 2.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
@@ -254,7 +254,7 @@ mod tests {
 
     #[test]
     fn test_quadtree_query_subdivided() {
-        let region = Region::new(vec![
+        let region = Region::new(&[
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
@@ -268,7 +268,7 @@ mod tests {
         }
 
         // Construct query region
-        let query_region = Region::new(vec![
+        let query_region = Region::new(&[
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
@@ -280,7 +280,7 @@ mod tests {
 
     #[test]
     fn test_quadtree_many_points() {
-        let region = Region::new(vec![
+        let region = Region::new(&[
             Interval::try_new(0.0, 100.0).unwrap(),
             Interval::try_new(0.0, 100.0).unwrap(),
         ]);
@@ -299,7 +299,7 @@ mod tests {
         }
 
         // Construct query region
-        let query_region = Region::new(vec![
+        let query_region = Region::new(&[
             Interval::try_new(0.0, 10.0).unwrap(),
             Interval::try_new(0.0, 10.0).unwrap(),
         ]);
@@ -313,7 +313,7 @@ mod tests {
     fn test_quadtree_single_point_interval() {
         const COUNT: usize = 10;
         // Create a quadtree where the region is a single point
-        let region = Region::new(vec![
+        let region = Region::new(&[
             Interval::try_new(1.0, 1.0 + f64::EPSILON).unwrap(),
             Interval::try_new(1.0, 1.0 + f64::EPSILON).unwrap(),
         ]);
@@ -351,7 +351,7 @@ mod tests {
             .collect();
 
         // Create a QuadTree with a region that covers the points
-        let region = Region::new(vec![
+        let region = Region::new(&[
             Interval::try_new(0.0, 1000.0).unwrap(),
             Interval::try_new(0.0, 1000.0).unwrap(),
         ]);
@@ -385,7 +385,7 @@ mod tests {
         let count_quadtree = points
             .iter()
             .filter(|&point| {
-                let query_region = CircleQuery::new(point.clone(), 10.0);
+                let query_region = DistanceQuery::new(point.clone(), 10.0);
                 quadtree
                     .query(&query_region)
                     .filter(|other_point| *other_point != point)
@@ -414,7 +414,7 @@ mod tests {
             .collect();
 
         // Create a QuadTree with a region that covers the points
-        let region = Region::new(vec![
+        let region = Region::new(&[
             Interval::try_new(0.0, 1000.0).unwrap(),
             Interval::try_new(0.0, 1000.0).unwrap(),
         ]);
@@ -423,7 +423,7 @@ mod tests {
             quadtree.insert(point.clone()).unwrap();
         }
 
-        let search_region = Region::new(vec![
+        let search_region = Region::new(&[
             Interval::try_new(550.0, 600.0).unwrap(),
             Interval::try_new(0.0, 200.0).unwrap(),
         ]);

@@ -1,7 +1,7 @@
 use eyre::{Result, ensure};
 use itertools::Itertools;
 
-use crate::{quadtree::Storable, query::CircleQuery};
+use crate::{quadtree::Storable, query::DistanceQuery};
 
 /// Point represents a point in n-dimensional space.
 #[derive(Debug, Clone, PartialEq)]
@@ -60,8 +60,8 @@ impl<const N: usize> Point<N> {
             .sqrt()
     }
 
-    pub fn to_circle_query(&self, distance: f64) -> CircleQuery<N> {
-        CircleQuery::new(self.clone(), distance)
+    pub fn to_distance_based_query(&self, distance: f64) -> DistanceQuery<N> {
+        DistanceQuery::new(self.clone(), distance)
     }
 }
 
