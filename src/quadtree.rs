@@ -42,9 +42,9 @@ pub trait Storable<V, const N: usize> {
 /// let results: Vec<_> = quadtree.query(&query_region).collect();
 /// assert_eq!(results.len(), 2);
 ///
-/// // Alternatively, search around a point using a CircleQuery
-/// let circle_query = Point::new(&[5.0, 5.0]).to_circle_query(3.0);
-/// let results: Vec<_> = quadtree.query(&circle_query).collect();
+/// // Alternatively, search around a point using a DistanceQuery
+/// let distance_query = Point::new(&[5.0, 5.0]).to_distance_based_query(3.0);
+/// let results: Vec<_> = quadtree.query(&distance_query).collect();
 /// ```
 pub struct QuadTree<const N: usize, V> {
     region: Region<N>,
@@ -133,7 +133,7 @@ mod tests {
     use rand::{Rng, SeedableRng};
 
     use super::*;
-    use crate::{interval::Interval, point::Point, query::CircleQuery};
+    use crate::{interval::Interval, point::Point, query::DistanceQuery};
 
     pub struct TestStruct(Point<2>, String);
     impl Storable<TestStruct, 2> for TestStruct {
@@ -385,7 +385,7 @@ mod tests {
         let count_quadtree = points
             .iter()
             .filter(|&point| {
-                let query_region = CircleQuery::new(point.clone(), 10.0);
+                let query_region = DistanceQuery::new(point.clone(), 10.0);
                 quadtree
                     .query(&query_region)
                     .filter(|other_point| *other_point != point)
