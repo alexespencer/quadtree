@@ -10,8 +10,8 @@ use std::num::NonZero;
         
 // Create a region, the bounds of the quadtree
 let region = Region::new(&[
-    Interval::try_new(0.0, 10.0).unwrap(), // X-axis
-    Interval::try_new(0.0, 10.0).unwrap(), // Y-axis
+    Interval::try_new(0.0, 10.0)?, // X-axis
+    Interval::try_new(0.0, 10.0)?, // Y-axis
 ]);
 
 // Initialise the QuadTree with this region and the maximum number of points each
@@ -23,13 +23,13 @@ let mut quadtree = QuadTree::new(&region, NonZero::new(4).unwrap());
 
 // Insert points into the QuadTree
 for i in 0..4 {
-    quadtree.insert(Point::new(&[i, 0])).unwrap();
+    quadtree.insert(Point::new(&[i, 0]))?;
 }
 
 // To query the QuadTree, provide a region, or anything that implements the Query trait
 let query_region = Region::new(&[
-    Interval::try_new(0.0, 2.0).unwrap(),
-    Interval::try_new(0.0, 10.0).unwrap(),
+    Interval::try_new(0.0, 2.0)?,
+    Interval::try_new(0.0, 10.0)?,
 ]);
 
 let results: Vec<_> = quadtree.query(&query_region).collect();
