@@ -1,8 +1,5 @@
 extern crate nannou;
 
-use eyre::{Context, Result};
-use std::{collections::HashSet, num::NonZeroUsize};
-
 use nannou::{
     event::ElementState,
     prelude::*,
@@ -10,63 +7,14 @@ use nannou::{
     winit::event::WindowEvent,
 };
 use nannou_egui::{Egui, egui};
-use quadtree::{QuadTree, region::Region};
-use quadtree::{interval::Interval, point::Point};
+use quadtree::point::Point;
+use visualize::{Model, Settings, Technique};
 
 fn main() {
-    nannou::app(model).update(update).run();
+    nannou::app(create_model).update(update).run();
 }
 
-const RADIUS: f32 = 100.0;
-const DOT_SIZE: f32 = 10.0;
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum Technique {
-    /// Use comparision of coordinates to determine distance
-    Cartesian,
-    /// Use a quadtree to determine distance
-    Quadtree,
-}
-
-struct Settings {
-    /// How large the cubes are.
-    technique: Technique,
-}
-
-struct Model {
-    seed: u64,
-    settings: Settings,
-    egui: Egui,
-    points: Vec<Point<2>>,
-    mouse_position: Option<Point<2>>,
-    region: Region<2>,
-}
-
-impl Model {
-    fn try_new(seed: u64, settings: Settings, egui: Egui, rect: Rect) -> Result<Self> {
-        // Create a region from the Rect
-        let region = Region::new(&[
-            Interval::try_new(rect.left() as f64, rect.right() as f64)
-                .context("converting rect to Interval")?,
-            Interval::try_new(rect.bottom() as f64, rect.top() as f64)
-                .context("converting rect to Interval")?,
-        ]);
-        Ok(Self {
-            seed,
-            settings,
-            egui,
-            points: Vec::new(),
-            mouse_position: None,
-            region,
-        })
-    }
-
-    fn add_point(&mut self, point: Point<2>) {
-        self.points.push(point);
-    }
-}
-
-fn model(app: &App) -> Model {
+fn create_model(app: &App) -> Model {
     // Create window
     let window_id = app
         .new_window()
@@ -79,7 +27,6 @@ fn model(app: &App) -> Model {
     let egui = Egui::from_window(&window);
 
     Model::try_new(
-        42,
         Settings {
             technique: Technique::Cartesian,
         },
@@ -103,7 +50,7 @@ fn raw_window_event(app: &App, model: &mut Model, event: &WindowEvent) {
         if *button == MouseButton::Left && *state == ElementState::Pressed {
             // Only add points if egui is not handling the pointer input
             if !ctx.wants_pointer_input() {
-                model.add_point(point.clone());
+                model.add_point(point);
             }
             model.mouse_position = Some(point);
         }
@@ -131,72 +78,11 @@ fn update(_app: &App, model: &mut Model, update: Update) {
     });
 }
 
-impl Model {
-    fn points_within_distance(
-        &self,
-        points: &[Point<2>],
-        center: &Point<2>,
-        distance: f64,
-    ) -> HashSet<Point<2>> {
-        match self.settings.technique {
-            Technique::Cartesian => points
-                .iter()
-                .filter(|&point| point.distance(center) <= distance)
-                .cloned()
-                .collect(),
-            Technique::Quadtree => {
-                let mut qt: QuadTree<2, Point<2>> =
-                    QuadTree::new(&self.region, NonZeroUsize::new(2).expect("2 is non-zero"));
-                // Insert points into the quadtree
-                for point in points {
-                    qt.insert(point.clone())
-                        .expect("Inserting point into quadtree succeeds");
-                }
-                // Query
-                let distance_squared = center.to_distance_based_query(distance);
-                qt.query(&distance_squared).into_iter().cloned().collect()
-            }
-        }
-    }
-
-    fn draw_app(&self, draw: &Draw, points: &[Point<2>]) {
-        // Draw circle around the mouse position if it exists, and find points within that circle.
-        let points_inside_query: HashSet<Point<2>> = match &self.mouse_position {
-            Some(mouse_pos) => {
-                let coords = mouse_pos.dimension_values();
-                draw.ellipse()
-                    .x_y(coords[0] as f32, coords[1] as f32)
-                    .w_h(RADIUS * 2.0, RADIUS * 2.0)
-                    .stroke(GREEN)
-                    .stroke_weight(2.0)
-                    .no_fill();
-
-                self.points_within_distance(points, &Point::new(&coords), RADIUS as f64)
-            }
-            None => HashSet::new(),
-        };
-
-        // Draw the points, colouring them based on whether they are inside the query circle.
-        for point in points {
-            let coords = point.dimension_values();
-            let color = if points_inside_query.contains(point) {
-                GREEN
-            } else {
-                RED
-            };
-            draw.ellipse()
-                .x_y(coords[0] as f32, coords[1] as f32)
-                .w_h(DOT_SIZE, DOT_SIZE) // Set the size of the point
-                .color(color); // Set the color of the point
-        }
-    }
-}
-
 fn view(app: &App, model: &Model, frame: Frame) {
     frame.clear(WHITE);
 
     // Create rng (will be used for random placement of points)
-    let mut _main_rng = StdRng::seed_from_u64(model.seed);
+    let mut _main_rng = StdRng::seed_from_u64(42);
 
     // Prepare to draw.
     let draw = app.draw();
