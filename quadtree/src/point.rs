@@ -62,7 +62,7 @@ impl<const N: usize> Point<N> {
         )
     }
 
-    pub fn try_new<T: Copy + Into<f64>>(vec: &Vec<T>) -> Result<Point<N>> {
+    pub fn try_new<T: Copy + Into<f64>>(vec: &[T]) -> Result<Point<N>> {
         ensure!(
             vec.len() == N,
             "cannot create point of size {} from Vec of size {}",
@@ -127,19 +127,19 @@ mod tests {
     #[test]
     fn test_point_creation() {
         // 3D using integers
-        let point = Point::try_new(&vec![1, 2, 3]).unwrap();
+        let point = Point::try_new(&[1, 2, 3]).unwrap();
         assert_eq!(point.0, [1.0, 2.0, 3.0]);
 
         // 3D using floats
-        let point_float = Point::try_new(&vec![1.0, 2.0, 3.0]).unwrap();
+        let point_float = Point::try_new(&[1.0, 2.0, 3.0]).unwrap();
         assert_eq!(point_float.0, [1.0, 2.0, 3.0]);
 
         // 2D using integers
-        let point_2d = Point::try_new(&vec![4, 5]).unwrap();
+        let point_2d = Point::try_new(&[4, 5]).unwrap();
         assert_eq!(point_2d.0, [4.0, 5.0]);
 
         // Try to force an 3D slice into a 2D Point
-        let result = Point::<2>::try_new(&vec![4, 5, 6]);
+        let result = Point::<2>::try_new(&[4, 5, 6]);
         assert!(result.is_err());
     }
 

@@ -1,6 +1,7 @@
 use crate::{interval::Interval, point::Point, query::Query};
 use eyre::{Result, ensure};
 use itertools::Itertools;
+use rand::{Rng, distr::uniform::SampleRange};
 
 /// A region in n-dimensional space defined by a Vec of intervals.
 #[derive(Debug, Clone, PartialEq)]
@@ -8,10 +9,10 @@ pub struct Region<const N: usize>([Interval; N]);
 
 impl<const N: usize> Region<N> {
     pub fn new(intervals: &[Interval; N]) -> Self {
-        Region((*intervals).clone())
+        Region(*intervals)
     }
 
-    pub fn try_new(intervals: &Vec<Interval>) -> Result<Self> {
+    pub fn try_new(intervals: &[Interval]) -> Result<Self> {
         ensure!(
             intervals.len() == N,
             "cannot create region of size {} from Vec of size {}",
@@ -35,7 +36,7 @@ impl<const N: usize> Region<N> {
         self.intervals()
             .iter()
             .zip(point.dimension_values())
-            .all(|(interval, value)| interval.contains(&value))
+            .all(|(interval, value)| interval.contains(value))
     }
 
     pub fn subdivide(&self) -> Vec<[Interval; N]> {
@@ -63,6 +64,15 @@ impl<const N: usize> Region<N> {
             .iter()
             .zip(other.intervals().iter())
             .all(|(a, b)| a.intersects(b))
+    }
+
+    pub fn sample_point(&self, rng: &mut impl Rng) -> Point<N> {
+        let values: Vec<f64> = self
+            .intervals()
+            .iter()
+            .map(|interval| interval.sample_single(rng).unwrap())
+            .collect();
+        Point::try_new(&values).expect("should be same size as N")
     }
 }
 
@@ -102,6 +112,8 @@ fn test_compile_fail_different_dimensions() {}
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use itertools::Itertools;
 
     use crate::{interval::Interval, point::Point, region::Region};
@@ -170,5 +182,37 @@ mod tests {
             })
             .collect();
         assert_eq!(unique_intervals.len(), 8);
+    }
+
+    #[test]
+    fn test_intersects() {
+        let x_axis = Interval::try_new(1.0, 5.0).unwrap();
+        let y_axis = Interval::try_new(20.0, 60.0).unwrap();
+        let region_a = Region::new(&[x_axis, y_axis]);
+        let region_b = Region::new(&[Interval::try_new(4.0, 6.0).unwrap(), y_axis]);
+
+        assert!(region_a.intersects(&region_b));
+
+        let region_c = Region::new(&[Interval::try_new(6.0, 8.0).unwrap(), y_axis]);
+        assert!(!region_a.intersects(&region_c));
+    }
+
+    #[test]
+    fn test_sample_point() {
+        let x_axis = Interval::try_new(1.0, 5.0).unwrap();
+        let y_axis = Interval::try_new(20.0, 60.0).unwrap();
+        let region = Region::new(&[x_axis, y_axis]);
+
+        use rand::{SeedableRng, rngs::StdRng};
+        let mut rng = StdRng::seed_from_u64(42);
+
+        let mut points_seen = HashSet::new();
+        for _ in 0..100 {
+            let point = region.sample_point(&mut rng);
+            points_seen.insert(point);
+            assert!(region.contains(&point));
+        }
+        // Ensure we sampled multiple unique points
+        assert_eq!(points_seen.len(), 100);
     }
 }
