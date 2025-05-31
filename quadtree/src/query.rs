@@ -30,7 +30,7 @@ impl<const N: usize> DistanceQuery<N> {
             .expect("same sized array");
         let region = Region::new(&intervals);
         DistanceQuery {
-            center: center.clone(),
+            center: *center,
             radius,
             region,
         }

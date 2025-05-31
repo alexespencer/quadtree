@@ -1,4 +1,5 @@
 use eyre::{Result, ensure};
+use rand::distr::uniform::SampleRange;
 
 /// Represents an interval with a start and end value.
 /// The interval is inclusive of start and exclusive of end.
@@ -32,7 +33,7 @@ impl Interval {
     pub fn subdivide(&self) -> Vec<Self> {
         let midpoint = self.start.midpoint(self.end);
         if self.start == midpoint {
-            vec![self.clone()]
+            vec![*self]
         } else {
             vec![
                 Interval {
@@ -49,6 +50,21 @@ impl Interval {
 
     pub fn intersects(&self, other: &Self) -> bool {
         self.start < other.end && other.start < self.end
+    }
+}
+
+impl SampleRange<f64> for Interval {
+    fn sample_single<R: rand::RngCore + ?Sized>(
+        self,
+        rng: &mut R,
+    ) -> std::result::Result<f64, rand::distr::uniform::Error> {
+        // Generate a random value within the interval
+        (self.start..=self.end).sample_single(rng)
+    }
+
+    fn is_empty(&self) -> bool {
+        // By construction, an Interval cannot be empty
+        false
     }
 }
 
@@ -112,5 +128,15 @@ mod tests {
         assert!(!interval_a.intersects(&interval_c));
         assert!(!interval_b.intersects(&interval_c));
         assert!(!interval_d.intersects(&interval_a));
+    }
+
+    #[test]
+    fn test_interval_sample_range() {
+        let interval = Interval::try_new(1.0, 5.0).unwrap();
+        let mut rng = rand::rng();
+        for _ in 0..100 {
+            let sample = interval.sample_single(&mut rng).unwrap();
+            assert!(interval.contains(&sample));
+        }
     }
 }

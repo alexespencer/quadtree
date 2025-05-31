@@ -70,7 +70,7 @@ impl<const N: usize, V: Storable<V, N>> QuadTree<N, V> {
     /// All points must be [Storable] and of the type set in the [QuadTree].
     pub fn insert(&mut self, point: V) -> Result<()> {
         if self.points.len() < self.points.capacity() {
-            if !self.region.contains(&point.point()) {
+            if !self.region.contains(point.point()) {
                 bail!("Point is outside the region");
             }
             self.points.push(point);
@@ -86,7 +86,7 @@ impl<const N: usize, V: Storable<V, N>> QuadTree<N, V> {
             .as_mut()
             .ok_or_eyre("subtrees not created, this is a bug")?
         {
-            if subtree.region.contains(&point.point()) {
+            if subtree.region.contains(point.point()) {
                 return subtree.insert(point);
             }
         }
@@ -118,7 +118,7 @@ impl<const N: usize, V: Storable<V, N>> QuadTree<N, V> {
         let my_iter = self
             .points
             .iter()
-            .filter_map(move |point| query.contains(&point.point()).then_some(point.item()));
+            .filter_map(move |point| query.contains(point.point()).then_some(point.item()));
 
         let subtree_iter = self.subtrees.iter().flat_map(|subtrees| {
             subtrees
@@ -226,8 +226,7 @@ mod tests {
             subtrees
                 .iter()
                 .flat_map(|subtree| subtree.points.iter())
-                .map(|p| p.item().1 == "data_subdivided")
-                .all(|x| x)
+                .all(|p| p.item().1 == "data_subdivided")
         );
     }
 
@@ -361,7 +360,7 @@ mod tests {
         ]);
         let mut quadtree = QuadTree::new(&region, NonZero::new(10).unwrap());
         for point in &points {
-            quadtree.insert(point.clone()).unwrap();
+            quadtree.insert(*point).unwrap();
         }
 
         // Loop over the points and count how many points have a neighbour within a distance of 10.0
@@ -424,7 +423,7 @@ mod tests {
         ]);
         let mut quadtree = QuadTree::new(&region, NonZero::new(10).unwrap());
         for point in &points {
-            quadtree.insert(point.clone()).unwrap();
+            quadtree.insert(*point).unwrap();
         }
 
         let search_region = Region::new(&[
@@ -437,7 +436,7 @@ mod tests {
         let start = std::time::Instant::now();
         let count_non_quadtree = points
             .iter()
-            .filter(|point| search_region.contains(&point.point()))
+            .filter(|point| search_region.contains(point.point()))
             .count();
         let elapsed_non_quadtree = start.elapsed();
         assert_ne!(
