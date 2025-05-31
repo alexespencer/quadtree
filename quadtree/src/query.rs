@@ -13,6 +13,7 @@ pub trait Query<const N: usize> {
     fn contains(&self, point: &Point<N>) -> bool;
 }
 
+#[derive(Clone, Debug)]
 pub struct DistanceQuery<const N: usize> {
     center: Point<N>,
     radius: f64,

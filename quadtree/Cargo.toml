@@ -8,6 +8,10 @@ approx.workspace = true
 eyre.workspace = true
 itertools.workspace = true
 num-traits.workspace = true
-ordered-float = "5.0.0"
 rand.workspace = true
+ordered-float = {version= "5.0.0", features=["serde"]}
 rand_chacha.workspace = true
+serdev = "0.2.0"
+
+[dev-dependencies]
+serde_json = "1.0.140"
