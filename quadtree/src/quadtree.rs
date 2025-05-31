@@ -129,6 +129,20 @@ impl<const N: usize, V: Storable<V, N>> QuadTree<N, V> {
 
         Box::new(my_iter.chain(subtree_iter))
     }
+
+    /// Returns all regions
+    pub fn regions(&self) -> Vec<Region<N>> {
+        let mut regions = vec![self.region.clone()];
+
+        regions.extend(
+            self.subtrees
+                .iter()
+                .flat_map(|subtrees| subtrees.iter().flat_map(|subtree| subtree.regions()))
+                .collect::<Vec<_>>(),
+        );
+
+        regions
+    }
 }
 
 #[cfg(test)]
@@ -228,6 +242,8 @@ mod tests {
                 .flat_map(|subtree| subtree.points.iter())
                 .all(|p| p.item().1 == "data_subdivided")
         );
+
+        assert!(quadtree.regions().len() > 1);
     }
 
     #[test]
