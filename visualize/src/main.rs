@@ -94,11 +94,15 @@ fn raw_window_event(app: &App, model: &mut Model, event: &WindowEvent) {
     model.egui.handle_raw_event(event);
     model.mouse_position = None;
 
+    // Get the egui context
+    let ctx = model.egui.ctx();
+
     // Handle mouse input for left-click
     if let WindowEvent::MouseInput { state, button, .. } = event {
-        if *button == MouseButton::Left {
-            let point = Point::new(&[app.mouse.x, app.mouse.y]);
-            if *state == ElementState::Pressed {
+        let point = Point::new(&[app.mouse.x, app.mouse.y]);
+        if *button == MouseButton::Left && *state == ElementState::Pressed {
+            // Only add points if egui is not handling the pointer input
+            if !ctx.wants_pointer_input() {
                 model.add_point(point.clone());
             }
             model.mouse_position = Some(point);
