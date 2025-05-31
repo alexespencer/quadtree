@@ -1,10 +1,13 @@
 extern crate nannou;
 
 use nannou::{
+    event::ElementState,
     prelude::*,
     rand::{SeedableRng, rngs::StdRng},
+    winit::event::WindowEvent,
 };
 use nannou_egui::{Egui, egui};
+use quadtree::point::Point;
 
 fn main() {
     nannou::app(model).update(update).run();
@@ -27,6 +30,22 @@ struct Model {
     seed: u64,
     settings: Settings,
     egui: Egui,
+    points: Vec<Point<2>>,
+}
+
+impl Model {
+    fn new(seed: u64, settings: Settings, egui: Egui) -> Self {
+        Self {
+            seed,
+            settings,
+            egui,
+            points: Vec::new(),
+        }
+    }
+
+    fn add_point(&mut self, point: Point<2>) {
+        self.points.push(point);
+    }
 }
 
 fn model(app: &App) -> Model {
@@ -41,18 +60,27 @@ fn model(app: &App) -> Model {
 
     let egui = Egui::from_window(&window);
 
-    Model {
-        seed: 42,
-        settings: Settings {
+    Model::new(
+        42,
+        Settings {
             technique: Technique::Cartesian,
         },
         egui,
-    }
+    )
 }
 
-fn raw_window_event(_app: &App, model: &mut Model, event: &nannou::winit::event::WindowEvent) {
+fn raw_window_event(app: &App, model: &mut Model, event: &WindowEvent) {
     // Let egui handle things like keyboard and mouse input.
     model.egui.handle_raw_event(event);
+
+    // Handle mouse input for left-click
+    if let WindowEvent::MouseInput { state, button, .. } = event {
+        if *button == MouseButton::Left && *state == ElementState::Pressed {
+            let mouse_pos = app.mouse.position();
+            let point = Point::new(&[mouse_pos.x, mouse_pos.y]);
+            model.add_point(point);
+        }
+    }
 }
 
 fn update(_app: &App, model: &mut Model, update: Update) {
@@ -73,6 +101,16 @@ fn update(_app: &App, model: &mut Model, update: Update) {
     });
 }
 
+fn draw_points(draw: &Draw, points: &[Point<2>]) {
+    for point in points {
+        let coords = point.dimension_values();
+        draw.ellipse()
+            .x_y(coords[0] as f32, coords[1] as f32)
+            .w_h(5.0, 5.0) // Set the size of the point
+            .color(BLACK); // Set the color of the point
+    }
+}
+
 fn view(app: &App, model: &Model, frame: Frame) {
     frame.clear(WHITE);
     let _window = app.window_rect();
@@ -82,6 +120,9 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     // Prepare to draw.
     let draw = app.draw();
+
+    // Draw the points
+    draw_points(&draw, &model.points);
 
     // Write to the window frame and draw the egui menu.
     draw.to_frame(app, &frame).unwrap();
