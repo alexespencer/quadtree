@@ -31,6 +31,7 @@ struct Model {
     settings: Settings,
     egui: Egui,
     points: Vec<Point<2>>,
+    mouse_position: Option<Point<2>>,
 }
 
 impl Model {
@@ -40,6 +41,7 @@ impl Model {
             settings,
             egui,
             points: Vec::new(),
+            mouse_position: None,
         }
     }
 
@@ -72,14 +74,20 @@ fn model(app: &App) -> Model {
 fn raw_window_event(app: &App, model: &mut Model, event: &WindowEvent) {
     // Let egui handle things like keyboard and mouse input.
     model.egui.handle_raw_event(event);
+    model.mouse_position = None;
 
     // Handle mouse input for left-click
     if let WindowEvent::MouseInput { state, button, .. } = event {
-        if *button == MouseButton::Left && *state == ElementState::Pressed {
-            let mouse_pos = app.mouse.position();
-            let point = Point::new(&[mouse_pos.x, mouse_pos.y]);
-            model.add_point(point);
+        if *button == MouseButton::Left {
+            let point = Point::new(&[app.mouse.x, app.mouse.y]);
+            if *state == ElementState::Pressed {
+                model.add_point(point.clone());
+            }
+            model.mouse_position = Some(point);
         }
+    } else if let WindowEvent::CursorMoved { .. } = event {
+        let point = Point::new(&[app.mouse.x, app.mouse.y]);
+        model.mouse_position = Some(point);
     }
 }
 
@@ -101,13 +109,24 @@ fn update(_app: &App, model: &mut Model, update: Update) {
     });
 }
 
-fn draw_points(draw: &Draw, points: &[Point<2>]) {
+fn draw_app(draw: &Draw, points: &[Point<2>], model: &Model) {
     for point in points {
         let coords = point.dimension_values();
         draw.ellipse()
             .x_y(coords[0] as f32, coords[1] as f32)
             .w_h(5.0, 5.0) // Set the size of the point
             .color(BLACK); // Set the color of the point
+    }
+
+    // Draw circle around the mouse position if it exists
+    if let Some(mouse_pos) = &model.mouse_position {
+        let coords = mouse_pos.dimension_values();
+        draw.ellipse()
+            .x_y(coords[0] as f32, coords[1] as f32)
+            .w_h(200.0, 200.0) // Set the size of the circle
+            .stroke(GREEN)
+            .stroke_weight(2.0)
+            .no_fill();
     }
 }
 
@@ -122,7 +141,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
 
     // Draw the points
-    draw_points(&draw, &model.points);
+    draw_app(&draw, &model.points, model);
 
     // Write to the window frame and draw the egui menu.
     draw.to_frame(app, &frame).unwrap();
