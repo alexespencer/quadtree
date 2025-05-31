@@ -137,8 +137,7 @@ impl<const N: usize, V: Storable<V, N>> QuadTree<N, V> {
         regions.extend(
             self.subtrees
                 .iter()
-                .flat_map(|subtrees| subtrees.iter().flat_map(|subtree| subtree.regions()))
-                .collect::<Vec<_>>(),
+                .flat_map(|subtrees| subtrees.iter().flat_map(|subtree| subtree.regions())),
         );
 
         regions
