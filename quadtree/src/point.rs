@@ -1,11 +1,53 @@
+use std::fmt::Display;
+
 use eyre::{Result, ensure};
 use itertools::Itertools;
+use ordered_float::OrderedFloat;
+use serdev::{Deserialize, Serialize};
 
 use crate::{quadtree::Storable, query::DistanceQuery};
 
 /// Point represents a point in n-dimensional space.
-#[derive(Debug, Clone, PartialEq)]
-pub struct Point<const N: usize>([f64; N]);
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+pub struct Point<const N: usize>([OrderedFloat<f64>; N]);
+
+impl<const N: usize> Display for Point<N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Point({})",
+            self.0.iter().map(|x| x.to_string()).join(", ")
+        )
+    }
+}
+
+impl<const N: usize> Default for Point<N> {
+    fn default() -> Self {
+        Self([OrderedFloat(0.0); N])
+    }
+}
+
+impl<const N: usize> Serialize for Point<N> {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serdev::Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de, const N: usize> Deserialize<'de> for Point<N> {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serdev::Deserializer<'de>,
+    {
+        let values: Vec<OrderedFloat<f64>> = Deserialize::deserialize(deserializer)?;
+        let array: [OrderedFloat<f64>; N] = values
+            .try_into()
+            .map_err(|_| serdev::de::Error::custom(format!("Expected a Vec of size {}", N)))?;
+        Ok(Point(array))
+    }
+}
 
 impl<const N: usize> Point<N> {
     /// Create a new [Point] from a slice of values
@@ -14,7 +56,7 @@ impl<const N: usize> Point<N> {
         Point(
             values
                 .iter()
-                .map(|value| (*value).into())
+                .map(|value| OrderedFloat((*value).into()))
                 .collect_array()
                 .expect("same size array"),
         )
@@ -29,16 +71,20 @@ impl<const N: usize> Point<N> {
         );
 
         Ok(Point(
-            vec.into_iter()
+            vec.iter()
                 .cloned()
-                .map(Into::into)
+                .map(|value| OrderedFloat((value).into()))
                 .collect_array()
                 .expect("same sized array"),
         ))
     }
 
-    pub fn dimension_values(&self) -> &[f64] {
-        &self.0
+    pub fn dimension_values(&self) -> [f64; N] {
+        self.0
+            .iter()
+            .map(|x| x.0)
+            .collect_array()
+            .expect("same size array")
     }
 
     pub fn dimensions(&self) -> usize {
@@ -54,7 +100,7 @@ impl<const N: usize> Point<N> {
             .zip(other.0.iter())
             .map(|(a, b)| {
                 let diff = a - b;
-                diff * diff
+                (diff * diff).0
             })
             .sum::<f64>()
             .sqrt()
@@ -129,5 +175,46 @@ mod tests {
         let point_b = Point::new(&[4, 5, 6]);
         let distance = point_a.distance(&point_b);
         assert_abs_diff_eq!(distance, 5.2, epsilon = 0.01);
+    }
+
+    #[test]
+    fn test_display() {
+        let point = Point::new(&[1.0, 2.1, 3.0]);
+        assert_eq!(point.to_string(), "Point(1, 2.1, 3)");
+    }
+
+    #[test]
+    fn test_point_default() {
+        let point: Point<3> = Point::default();
+        assert_eq!(point.0, [OrderedFloat(0.0); 3]);
+    }
+
+    #[test]
+    fn test_point_dimension_values() {
+        let point = Point::new(&[1.0, 2.0, 3.0]);
+        let values = point.dimension_values();
+        assert_eq!(values, [1.0, 2.0, 3.0]);
+    }
+
+    #[test]
+    fn test_point_dimensions() {
+        let point = Point::new(&[1.0, 2.0, 3.0]);
+        assert_eq!(point.dimensions(), 3);
+    }
+
+    #[test]
+    fn test_point_serde() {
+        let point = Point::new(&[1.0, 2.0, 3.0]);
+        let serialized = serde_json::to_string(&point).unwrap();
+        assert_eq!(serialized, "[1.0,2.0,3.0]");
+        let deserialized: Point<3> = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(point, deserialized);
+    }
+
+    #[test]
+    fn test_deserialize_invalid_size() {
+        let invalid_json = "[1.0, 2.0]"; // Expecting 3D point
+        let result: Result<Point<3>, _> = serde_json::from_str(invalid_json);
+        assert!(result.is_err(),);
     }
 }

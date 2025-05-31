@@ -35,7 +35,7 @@ impl<const N: usize> Region<N> {
         self.intervals()
             .iter()
             .zip(point.dimension_values())
-            .all(|(interval, value)| interval.contains(value))
+            .all(|(interval, value)| interval.contains(&value))
     }
 
     pub fn subdivide(&self) -> Vec<[Interval; N]> {
