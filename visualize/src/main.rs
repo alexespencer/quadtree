@@ -1,34 +1,89 @@
-use eyre::OptionExt;
-use eyre::Result;
-use quadtree::{interval::Interval, point::Point, quadtree::QuadTree, region::Region};
+extern crate nannou;
 
-use std::num::NonZero;
+use nannou::{
+    prelude::*,
+    rand::{SeedableRng, rngs::StdRng},
+};
+use nannou_egui::{Egui, egui};
 
-fn main() -> Result<()> {
-    // Create a region (the bounds of the quadtree)
-    let region = Region::new(&[
-        Interval::try_new(0.0, 10.0)?, // X-axis
-        Interval::try_new(0.0, 10.0)?, // Y-axis
-    ]);
+fn main() {
+    nannou::app(model).update(update).run();
+}
 
-    // Initialise the QuadTree
-    let mut quadtree = QuadTree::new(&region, NonZero::new(4).ok_or_eyre("value must be > 0")?);
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Technique {
+    /// Use comparision of coordinates to determine distance
+    Cartesian,
+    /// Use a quadtree to determine distance
+    Quadtree,
+}
 
-    // Insert points into the QuadTree
-    for i in 0..4 {
-        quadtree.insert(Point::new(&[i, 0]))?;
+struct Settings {
+    /// How large the cubes are.
+    technique: Technique,
+}
+
+struct Model {
+    seed: u64,
+    settings: Settings,
+    egui: Egui,
+}
+
+fn model(app: &App) -> Model {
+    // Create window
+    let window_id = app
+        .new_window()
+        .view(view)
+        .raw_event(raw_window_event)
+        .build()
+        .unwrap();
+    let window = app.window(window_id).unwrap();
+
+    let egui = Egui::from_window(&window);
+
+    Model {
+        seed: 42,
+        settings: Settings {
+            technique: Technique::Cartesian,
+        },
+        egui,
     }
+}
 
-    // Query quadtree
-    let query_region = Region::new(&[Interval::try_new(0.0, 2.0)?, Interval::try_new(0.0, 10.0)?]);
-    let results: Vec<_> = quadtree.query(&query_region).collect();
+fn raw_window_event(_app: &App, model: &mut Model, event: &nannou::winit::event::WindowEvent) {
+    // Let egui handle things like keyboard and mouse input.
+    model.egui.handle_raw_event(event);
+}
 
-    println!(
-        "{}",
-        format!(
-            "There are {} points within the distance query",
-            results.len()
-        )
-    );
-    Ok(())
+fn update(_app: &App, model: &mut Model, update: Update) {
+    let egui = &mut model.egui;
+    let settings = &mut model.settings;
+
+    egui.set_elapsed_time(update.since_start);
+    let ctx = egui.begin_frame();
+
+    egui::Window::new("Settings").show(&ctx, |ui| {
+        ui.label("Technique:");
+        egui::ComboBox::from_label("")
+            .selected_text(format!("{:?}", &mut settings.technique))
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut settings.technique, Technique::Cartesian, "Cartesian");
+                ui.selectable_value(&mut settings.technique, Technique::Quadtree, "Quadtree");
+            });
+    });
+}
+
+fn view(app: &App, model: &Model, frame: Frame) {
+    frame.clear(WHITE);
+    let _window = app.window_rect();
+
+    // Create rng
+    let mut _main_rng = StdRng::seed_from_u64(model.seed);
+
+    // Prepare to draw.
+    let draw = app.draw();
+
+    // Write to the window frame and draw the egui menu.
+    draw.to_frame(app, &frame).unwrap();
+    model.egui.draw_to_frame(&frame).unwrap();
 }
