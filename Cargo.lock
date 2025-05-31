@@ -2400,6 +2400,7 @@ dependencies = [
  "nannou",
  "nannou_egui",
  "quadtree",
+ "rand 0.9.1",
 ]
 
 [[package]]

@@ -1,14 +1,9 @@
 extern crate nannou;
 
-use nannou::{
-    event::ElementState,
-    prelude::*,
-    rand::{SeedableRng, rngs::StdRng},
-    winit::event::WindowEvent,
-};
-use nannou_egui::{Egui, egui};
+use nannou::{event::ElementState, prelude::*, winit::event::WindowEvent};
+use nannou_egui::Egui;
 use quadtree::point::Point;
-use visualize::{Model, Settings, Technique};
+use visualize::Model;
 
 fn main() {
     nannou::app(create_model).update(update).run();
@@ -26,14 +21,7 @@ fn create_model(app: &App) -> Model {
 
     let egui = Egui::from_window(&window);
 
-    Model::try_new(
-        Settings {
-            technique: Technique::Cartesian,
-        },
-        egui,
-        app.window_rect(),
-    )
-    .expect("valid Rect from app")
+    Model::try_new(egui, app.window_rect()).expect("valid Rect from app")
 }
 
 fn raw_window_event(app: &App, model: &mut Model, event: &WindowEvent) {
@@ -44,15 +32,21 @@ fn raw_window_event(app: &App, model: &mut Model, event: &WindowEvent) {
     // Get the egui context
     let ctx = model.egui.ctx();
 
-    // Handle mouse input for left-click
+    // Handle mouse input
     if let WindowEvent::MouseInput { state, button, .. } = event {
         let point = Point::new(&[app.mouse.x, app.mouse.y]);
-        if *button == MouseButton::Left && *state == ElementState::Pressed {
+        model.mouse_position = Some(point);
+        if !ctx.wants_pointer_input() {
             // Only add points if egui is not handling the pointer input
-            if !ctx.wants_pointer_input() {
+
+            // Left-click (adding point manually)
+            if *button == MouseButton::Left && *state == ElementState::Pressed {
                 model.add_point(point);
             }
-            model.mouse_position = Some(point);
+            // Right-click (adding random points)
+            if *button == MouseButton::Right && *state == ElementState::Pressed {
+                model.add_random_points(500);
+            }
         }
     } else if let WindowEvent::CursorMoved { .. } = event {
         let point = Point::new(&[app.mouse.x, app.mouse.y]);
@@ -60,29 +54,13 @@ fn raw_window_event(app: &App, model: &mut Model, event: &WindowEvent) {
     }
 }
 
-fn update(_app: &App, model: &mut Model, update: Update) {
+fn update(_app: &App, model: &mut Model, _update: Update) {
     let egui = &mut model.egui;
-    let settings = &mut model.settings;
-
-    egui.set_elapsed_time(update.since_start);
-    let ctx = egui.begin_frame();
-
-    egui::Window::new("Settings").show(&ctx, |ui| {
-        ui.label("Technique:");
-        egui::ComboBox::from_label("")
-            .selected_text(format!("{:?}", &mut settings.technique))
-            .show_ui(ui, |ui| {
-                ui.selectable_value(&mut settings.technique, Technique::Cartesian, "Cartesian");
-                ui.selectable_value(&mut settings.technique, Technique::Quadtree, "Quadtree");
-            });
-    });
+    let _ctx = egui.begin_frame();
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
     frame.clear(WHITE);
-
-    // Create rng (will be used for random placement of points)
-    let mut _main_rng = StdRng::seed_from_u64(42);
 
     // Prepare to draw.
     let draw = app.draw();
@@ -98,7 +76,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             app.window_rect().top() - 20.0,
         ) // Position in top-right
         .color(BLACK)
-        .font_size(16);
+        .font_size(20);
 
     // Write to the window frame and draw the egui menu.
     draw.to_frame(app, &frame).unwrap();

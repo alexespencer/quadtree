@@ -1,2 +1,2 @@
 pub(crate) mod model;
-pub use model::{Model, Settings, Technique};
+pub use model::{Model, Technique};

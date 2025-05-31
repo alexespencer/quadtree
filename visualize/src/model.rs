@@ -11,11 +11,13 @@ use nannou_egui::Egui;
 use quadtree::QuadTree;
 use quadtree::region::Region;
 use quadtree::{interval::Interval, point::Point};
+use rand::SeedableRng;
+use rand::rngs::StdRng;
 
 use nannou::prelude::*;
 
 const RADIUS: f32 = 100.0;
-const DOT_SIZE: f32 = 10.0;
+const DOT_SIZE: f32 = 7.5;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Technique {
@@ -25,21 +27,16 @@ pub enum Technique {
     Quadtree,
 }
 
-pub struct Settings {
-    /// What technique to use for distance calculation
-    pub technique: Technique,
-}
-
 pub struct Model {
-    pub settings: Settings,
     pub egui: Egui,
     pub points: Vec<Point<2>>,
     pub mouse_position: Option<Point<2>>,
     pub region: Region<2>,
+    rng: StdRng,
 }
 
 impl Model {
-    pub fn try_new(settings: Settings, egui: Egui, rect: Rect) -> Result<Self> {
+    pub fn try_new(egui: Egui, rect: Rect) -> Result<Self> {
         // Create a region from the Rect
         let region = Region::new(&[
             Interval::try_new(rect.left() as f64, rect.right() as f64)
@@ -48,16 +45,23 @@ impl Model {
                 .context("converting rect to Interval")?,
         ]);
         Ok(Self {
-            settings,
             egui,
             points: Vec::new(),
             mouse_position: None,
             region,
+            rng: SeedableRng::seed_from_u64(42),
         })
     }
 
     pub fn add_point(&mut self, point: Point<2>) {
         self.points.push(point);
+    }
+
+    pub fn add_random_points(&mut self, count: usize) {
+        for _ in 0..count {
+            let point = self.region.sample_point(&mut self.rng);
+            self.add_point(point);
+        }
     }
 
     fn points_within_distance(
@@ -66,25 +70,16 @@ impl Model {
         center: &Point<2>,
         distance: f64,
     ) -> HashSet<Point<2>> {
-        match self.settings.technique {
-            Technique::Cartesian => points
-                .iter()
-                .filter(|&point| point.distance(center) <= distance)
-                .cloned()
-                .collect(),
-            Technique::Quadtree => {
-                let mut qt: QuadTree<2, Point<2>> =
-                    QuadTree::new(&self.region, NonZeroUsize::new(2).expect("2 is non-zero"));
-                // Insert points into the quadtree
-                for point in points {
-                    qt.insert(*point)
-                        .expect("Inserting point into quadtree succeeds");
-                }
-                // Query
-                let distance_squared = center.to_distance_based_query(distance);
-                qt.query(&distance_squared).cloned().collect()
-            }
+        let mut qt: QuadTree<2, Point<2>> =
+            QuadTree::new(&self.region, NonZeroUsize::new(2).expect("2 is non-zero"));
+        // Insert points into the quadtree
+        for point in points {
+            qt.insert(*point)
+                .expect("Inserting point into quadtree succeeds");
         }
+        // Query
+        let distance_squared = center.to_distance_based_query(distance);
+        qt.query(&distance_squared).cloned().collect()
     }
 
     pub fn draw_app(&self, draw: &Draw, points: &[Point<2>]) {
@@ -99,7 +94,7 @@ impl Model {
                     .stroke_weight(2.0)
                     .no_fill();
 
-                self.points_within_distance(points, &Point::new(&coords), RADIUS as f64)
+                self.points_within_distance(points, &Point::new(coords), RADIUS as f64)
             }
             None => HashSet::new(),
         };
