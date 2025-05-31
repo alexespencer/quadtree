@@ -79,12 +79,9 @@ impl<const N: usize> Point<N> {
         ))
     }
 
-    pub fn dimension_values(&self) -> [f64; N] {
-        self.0
-            .iter()
-            .map(|x| x.0)
-            .collect_array()
-            .expect("same size array")
+    pub fn dimension_values(&self) -> &[f64; N] {
+        // SAFETY: OrderedFloat<f64> has the same repr as f64, and the array sizes match.
+        unsafe { &*(self.0.as_ptr() as *const [f64; N]) }
     }
 
     pub fn dimensions(&self) -> usize {
@@ -193,7 +190,7 @@ mod tests {
     fn test_point_dimension_values() {
         let point = Point::new(&[1.0, 2.0, 3.0]);
         let values = point.dimension_values();
-        assert_eq!(values, [1.0, 2.0, 3.0]);
+        assert_eq!(values, &[1.0, 2.0, 3.0]);
     }
 
     #[test]
