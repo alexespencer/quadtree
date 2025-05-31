@@ -24,11 +24,8 @@ fn main() -> Result<()> {
     let results: Vec<_> = quadtree.query(&query_region).collect();
 
     println!(
-        "{}",
-        format!(
-            "There are {} points within the distance query",
-            results.len()
-        )
+        "There are {} points within the distance query",
+        results.len()
     );
     Ok(())
 }
