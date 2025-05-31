@@ -200,6 +200,16 @@ fn view(app: &App, model: &Model, frame: Frame) {
     // Draw the points
     model.draw_app(&draw, &model.points);
 
+    // Draw FPS counter
+    let fps = app.fps();
+    draw.text(&format!("FPS: {:.0}", fps))
+        .x_y(
+            app.window_rect().right() - 50.0,
+            app.window_rect().top() - 20.0,
+        ) // Position in top-right
+        .color(BLACK)
+        .font_size(16);
+
     // Write to the window frame and draw the egui menu.
     draw.to_frame(app, &frame).unwrap();
     model.egui.draw_to_frame(&frame).unwrap();
