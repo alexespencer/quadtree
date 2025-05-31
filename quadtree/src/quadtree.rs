@@ -49,6 +49,7 @@ pub trait Storable<V, const N: usize> {
 /// #     Ok(())
 /// # }
 /// ```
+#[derive(Clone, PartialEq, Debug)]
 pub struct QuadTree<const N: usize, V> {
     region: Region<N>,
     subtrees: Option<Vec<QuadTree<N, V>>>,
