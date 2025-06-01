@@ -8,4 +8,4 @@ quadtree = {path = "../quadtree", features=["nannou"]}
 rand.workspace = true
 eyre.workspace = true
 nannou.workspace = true
-nannou_egui .workspace = true
+nannou_egui.workspace = true
