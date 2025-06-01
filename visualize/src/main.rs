@@ -27,7 +27,7 @@ fn create_model(app: &App) -> Model {
 fn raw_window_event(app: &App, model: &mut Model, event: &WindowEvent) {
     // Let egui handle things like keyboard and mouse input.
     model.egui.handle_raw_event(event);
-    model.mouse_position = None;
+    model.set_mouse_position(None);
 
     // Get the egui context
     let ctx = model.egui.ctx();
@@ -35,10 +35,11 @@ fn raw_window_event(app: &App, model: &mut Model, event: &WindowEvent) {
     // Handle mouse input
     if let WindowEvent::MouseInput { state, button, .. } = event {
         let point = Point::new(&[app.mouse.x, app.mouse.y]);
-        model.mouse_position = Some(point);
-        if !ctx.wants_pointer_input() {
-            // Only add points if egui is not handling the pointer input
+        let wants_pointer_input = ctx.wants_pointer_input();
+        model.set_mouse_position(Some(point));
 
+        // Only add points if egui is not handling the pointer input
+        if !wants_pointer_input {
             // Left-click (adding point manually)
             if *button == MouseButton::Left && *state == ElementState::Pressed {
                 model.add_point(point);
@@ -50,7 +51,7 @@ fn raw_window_event(app: &App, model: &mut Model, event: &WindowEvent) {
         }
     } else if let WindowEvent::CursorMoved { .. } = event {
         let point = Point::new(&[app.mouse.x, app.mouse.y]);
-        model.mouse_position = Some(point);
+        model.set_mouse_position(Some(point));
     }
 }
 
@@ -66,7 +67,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
 
     // Draw the points, mouse query circle and QuadTree rectangles
-    model.draw_app(&draw, &model.points);
+    model.draw_app(&draw);
 
     // Draw FPS counter
     let fps = app.fps();
