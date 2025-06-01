@@ -36,3 +36,9 @@ let results: Vec<_> = quadtree.query(&query_region).collect();
 
 assert_eq!(results.len(), 2);
 ```
+
+# Visualisation
+
+To run the `nannou` app, run `cargo run --bin visualize`.
+
+![](assets/vis.gif)
