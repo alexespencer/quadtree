@@ -1,6 +1,6 @@
 # QuadTree motivation
 
-This repo implements a QuadTree (more correctly, an orthtree) in Rust. It is generic over the number of dimensions, the type of data stored, and the shape of the region being queried. Any struct that implements `Storable` can be inserted. When querying, pass in any region that implements `Query`.
+This repo implements a QuadTree (more correctly, an orthtree) in Rust. It is generic over the number of dimensions, the type of data stored, and the shape of the region being queried. Any struct that is `Storable` can be inserted. When querying, pass in any region that is `Query`. `Point` is automatically `Storable`
 
 # Usage
 
@@ -19,7 +19,7 @@ let region = Region::new(&[
 // it implements the Storable trait.
 // Here we're deferring the type of the QuadTree to the compiler,
 // inferred from the first insert
-let mut quadtree = QuadTree::new(&region, NonZero::new(4).unwrap());
+let mut quadtree = QuadTree::new(&region, NonZero::new(4).expect("4 is non-zero"));
 
 // Insert points into the QuadTree
 for i in 0..4 {
