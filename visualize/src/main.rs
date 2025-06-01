@@ -78,6 +78,13 @@ fn view(app: &App, model: &Model, frame: Frame) {
         .color(BLACK)
         .font_size(20);
 
+    // Add help instructions
+    draw.text("Left-click to add a point, Right-click to add random points")
+        .x_y(0.0, app.window_rect().bottom() + 20.0)
+        .width(500.0)
+        .color(BLACK)
+        .font_size(14);
+
     // Write to the window frame and draw the egui menu.
     draw.to_frame(app, &frame).unwrap();
     model.egui.draw_to_frame(&frame).unwrap();
