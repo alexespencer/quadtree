@@ -88,6 +88,35 @@ impl<const N: usize> Query<N> for Region<N> {
     }
 }
 
+#[cfg(feature = "nannou")]
+impl From<&Region<2>> for nannou::geom::Rect {
+    fn from(region: &Region<2>) -> Self {
+        // Convert the region to a Rect
+        nannou::geom::Rect::from_corners(
+            nannou::geom::pt2(
+                *region.intervals()[0].start() as f32,
+                *region.intervals()[1].start() as f32,
+            ),
+            nannou::geom::pt2(
+                *region.intervals()[0].end() as f32,
+                *region.intervals()[1].end() as f32,
+            ),
+        )
+    }
+}
+
+#[cfg(feature = "nannou")]
+impl From<nannou::geom::Rect> for Region<2> {
+    fn from(rect: nannou::geom::Rect) -> Self {
+        Region::new(&[
+            Interval::try_new(rect.left() as f64, rect.right() as f64)
+                .expect("valid Rect produces valid x-axis"),
+            Interval::try_new(rect.bottom() as f64, rect.top() as f64)
+                .expect("valid Rect produces valid y-axis"),
+        ])
+    }
+}
+
 /// Demonstrates region containment with correct and incorrect point dimensions.
 ///
 /// This compiles:

@@ -131,6 +131,7 @@ impl<const N: usize, V: Storable<V, N>> QuadTree<N, V> {
     }
 
     /// Returns all regions
+    #[cfg(feature = "nannou")]
     pub fn regions(&self) -> Vec<Region<N>> {
         let mut regions = vec![self.region.clone()];
 

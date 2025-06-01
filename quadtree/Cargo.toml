@@ -9,9 +9,13 @@ eyre.workspace = true
 itertools.workspace = true
 num-traits.workspace = true
 rand.workspace = true
-ordered-float = {version= "5.0.0", features=["serde"]}
+ordered-float = { version = "5.0.0", features = ["serde"] }
 rand_chacha.workspace = true
 serdev = "0.2.0"
+nannou = {workspace = true, optional = true}
+
+[features]
+nannou = ["dep:nannou"]
 
 [dev-dependencies]
 serde_json = "1.0.140"
