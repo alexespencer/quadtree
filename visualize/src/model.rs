@@ -20,19 +20,11 @@ const RADIUS: f32 = 100.0;
 const DOT_SIZE: f32 = 7.5;
 type Point2D = Point<2>;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Technique {
-    /// Use comparision of coordinates to determine distance
-    Cartesian,
-    /// Use a quadtree to determine distance
-    Quadtree,
-}
-
 pub struct Model {
     pub egui: Egui,
-    pub points: Vec<Point2D>,
-    pub mouse_position: Option<Point2D>,
-    pub region: Region<2>,
+    points: Vec<Point2D>,
+    mouse_position: Option<Point2D>,
+    region: Region<2>,
     rng: StdRng,
 }
 
@@ -47,6 +39,10 @@ impl Model {
             region,
             rng: SeedableRng::seed_from_u64(42),
         })
+    }
+
+    pub fn set_mouse_position(&mut self, position: Option<Point2D>) {
+        self.mouse_position = position;
     }
 
     pub fn add_point(&mut self, point: Point2D) {
@@ -71,18 +67,7 @@ impl Model {
         qt
     }
 
-    fn points_within_distance(
-        &self,
-        qt: &QuadTree<2, Point2D>,
-        center: &Point2D,
-        distance: f64,
-    ) -> HashSet<Point2D> {
-        // Query
-        let distance_squared = center.to_distance_based_query(distance);
-        qt.query(&distance_squared).cloned().collect()
-    }
-
-    pub fn draw_app(&self, draw: &Draw, points: &[Point2D]) {
+    pub fn draw_app(&self, draw: &Draw) {
         let qt = self.quadtree();
         // Draw circle around the mouse position if it exists, and find points within that circle.
         let points_inside_query = match &self.mouse_position {
@@ -95,13 +80,14 @@ impl Model {
                     .stroke_weight(2.0)
                     .no_fill();
 
-                self.points_within_distance(&qt, &Point::new(coords), RADIUS as f64)
+                let distance_query = &Point::new(coords).to_distance_based_query(RADIUS as f64);
+                qt.query(distance_query).cloned().collect()
             }
             None => HashSet::new(),
         };
 
         // Draw the points, colouring them based on whether they are inside the query circle.
-        for point in points {
+        for point in &self.points {
             let coords = point.dimension_values();
             let color = if points_inside_query.contains(point) {
                 GREEN
