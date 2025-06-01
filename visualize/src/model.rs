@@ -3,14 +3,14 @@ extern crate nannou;
 use std::collections::HashSet;
 use std::num::NonZeroUsize;
 
-use eyre::{Context, Result};
+use eyre::Result;
 
 use nannou::Draw;
 use nannou::geom::Rect;
 use nannou_egui::Egui;
 use quadtree::QuadTree;
+use quadtree::point::Point;
 use quadtree::region::Region;
-use quadtree::{interval::Interval, point::Point};
 use rand::SeedableRng;
 use rand::rngs::StdRng;
 
@@ -39,12 +39,7 @@ pub struct Model {
 impl Model {
     pub fn try_new(egui: Egui, rect: Rect) -> Result<Self> {
         // Create a region from the Rect
-        let region = Region::new(&[
-            Interval::try_new(rect.left() as f64, rect.right() as f64)
-                .context("converting rect to Interval")?,
-            Interval::try_new(rect.bottom() as f64, rect.top() as f64)
-                .context("converting rect to Interval")?,
-        ]);
+        let region: Region<2> = rect.into();
         Ok(Self {
             egui,
             points: Vec::new(),
@@ -121,7 +116,7 @@ impl Model {
 
         // Draw the quadtree regions
         for region in qt.regions().iter() {
-            let rect = region_to_rect(region);
+            let rect: Rect = region.into();
             draw.rect()
                 .xy(rect.xy())
                 .wh(rect.wh())
@@ -130,18 +125,4 @@ impl Model {
                 .no_fill();
         }
     }
-}
-
-fn region_to_rect(region: &Region<2>) -> Rect {
-    // Convert the region to a Rect
-    Rect::from_corners(
-        pt2(
-            *region.intervals()[0].start() as f32,
-            *region.intervals()[1].start() as f32,
-        ),
-        pt2(
-            *region.intervals()[0].end() as f32,
-            *region.intervals()[1].end() as f32,
-        ),
-    )
 }

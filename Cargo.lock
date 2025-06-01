@@ -1762,6 +1762,7 @@ dependencies = [
  "approx 0.5.1",
  "eyre",
  "itertools",
+ "nannou",
  "num-traits",
  "ordered-float 5.0.0",
  "rand 0.9.1",

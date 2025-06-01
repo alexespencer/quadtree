@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-quadtree = {path = "../quadtree"}
+quadtree = {path = "../quadtree", features=["nannou"]}
 rand.workspace = true
 eyre.workspace = true
-nannou = "0.19.0"
-nannou_egui = "0.19.0"
+nannou.workspace = true
+nannou_egui.workspace = true

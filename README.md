@@ -42,3 +42,9 @@ assert_eq!(results.len(), 2);
 To run the `nannou` app, run `cargo run --bin visualize`.
 
 ![](assets/vis.gif)
+
+# Features
+
+There is a feature `nannou` on `quadtree` that provides:
+- calling `regions()` on a QuadTree to return all regions stored under all sub-trees, useful for debug/visualisation
+- provide Into/From between `quadtree::Region` and `nannou::geom::Rect`
