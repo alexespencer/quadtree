@@ -18,6 +18,7 @@ use nannou::prelude::*;
 
 const RADIUS: f32 = 100.0;
 const DOT_SIZE: f32 = 7.5;
+type Point2D = Point<2>;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Technique {
@@ -29,8 +30,8 @@ pub enum Technique {
 
 pub struct Model {
     pub egui: Egui,
-    pub points: Vec<Point<2>>,
-    pub mouse_position: Option<Point<2>>,
+    pub points: Vec<Point2D>,
+    pub mouse_position: Option<Point2D>,
     pub region: Region<2>,
     rng: StdRng,
 }
@@ -53,7 +54,7 @@ impl Model {
         })
     }
 
-    pub fn add_point(&mut self, point: Point<2>) {
+    pub fn add_point(&mut self, point: Point2D) {
         self.points.push(point);
     }
 
@@ -66,11 +67,11 @@ impl Model {
 
     fn points_within_distance(
         &self,
-        points: &[Point<2>],
-        center: &Point<2>,
+        points: &[Point2D],
+        center: &Point2D,
         distance: f64,
-    ) -> HashSet<Point<2>> {
-        let mut qt: QuadTree<2, Point<2>> =
+    ) -> (HashSet<Point2D>, Option<QuadTree<2, Point2D>>) {
+        let mut qt: QuadTree<2, Point2D> =
             QuadTree::new(&self.region, NonZeroUsize::new(2).expect("2 is non-zero"));
         // Insert points into the quadtree
         for point in points {
@@ -79,12 +80,12 @@ impl Model {
         }
         // Query
         let distance_squared = center.to_distance_based_query(distance);
-        qt.query(&distance_squared).cloned().collect()
+        (qt.query(&distance_squared).cloned().collect(), Some(qt))
     }
 
-    pub fn draw_app(&self, draw: &Draw, points: &[Point<2>]) {
+    pub fn draw_app(&self, draw: &Draw, points: &[Point2D]) {
         // Draw circle around the mouse position if it exists, and find points within that circle.
-        let points_inside_query: HashSet<Point<2>> = match &self.mouse_position {
+        let (points_inside_query, quadtree) = match &self.mouse_position {
             Some(mouse_pos) => {
                 let coords = mouse_pos.dimension_values();
                 draw.ellipse()
@@ -96,7 +97,7 @@ impl Model {
 
                 self.points_within_distance(points, &Point::new(coords), RADIUS as f64)
             }
-            None => HashSet::new(),
+            None => (HashSet::new(), None),
         };
 
         // Draw the points, colouring them based on whether they are inside the query circle.
@@ -112,5 +113,32 @@ impl Model {
                 .w_h(DOT_SIZE, DOT_SIZE) // Set the size of the point
                 .color(color); // Set the color of the point
         }
+
+        // Draw the quadtree regions
+        if let Some(quadtree) = quadtree {
+            for region in quadtree.regions().iter() {
+                let rect = region_to_rect(region);
+                draw.rect()
+                    .xy(rect.xy())
+                    .wh(rect.wh())
+                    .stroke(BLUE)
+                    .stroke_weight(1.0)
+                    .no_fill();
+            }
+        }
     }
+}
+
+fn region_to_rect(region: &Region<2>) -> Rect {
+    // Convert the region to a Rect
+    Rect::from_corners(
+        pt2(
+            *region.intervals()[0].start() as f32,
+            *region.intervals()[1].start() as f32,
+        ),
+        pt2(
+            *region.intervals()[0].end() as f32,
+            *region.intervals()[1].end() as f32,
+        ),
+    )
 }
