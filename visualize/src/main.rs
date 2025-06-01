@@ -65,7 +65,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     // Prepare to draw.
     let draw = app.draw();
 
-    // Draw the points, mouose query circle and QuadTree rectangles
+    // Draw the points, mouse query circle and QuadTree rectangles
     model.draw_app(&draw, &model.points);
 
     // Draw FPS counter
